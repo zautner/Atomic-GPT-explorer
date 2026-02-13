@@ -335,6 +335,60 @@ type TrainResponse struct {
 	Loss float64 `json:"loss"`
 }
 
+type TraceCandidate struct {
+	Char    string  `json:"char"`
+	TokenID int     `json:"token_id"`
+	Logit   float64 `json:"logit"`
+	Prob    float64 `json:"prob"`
+}
+
+type TraceStep struct {
+	Position   int              `json:"position"`
+	Context    string           `json:"context"`
+	TopK       []TraceCandidate `json:"top_k"`
+	RandomU    float64          `json:"random_u"`
+	ChosenChar string           `json:"chosen_char"`
+	ChosenProb float64          `json:"chosen_prob"`
+	Reason     string           `json:"reason"`
+}
+
+type GenerateTraceResponse struct {
+	Text       string      `json:"text"`
+	Steps      []TraceStep `json:"steps"`
+	StopReason string      `json:"stop_reason"`
+}
+
+func tokenLabel(tokenID, bos int, chars []string) string {
+	if tokenID == bos {
+		return "<END>"
+	}
+	return chars[tokenID]
+}
+
+func topKCandidates(logits, probs []*Value, chars []string, bos, k int) []TraceCandidate {
+	indices := make([]int, len(probs))
+	for i := range probs {
+		indices[i] = i
+	}
+	sort.Slice(indices, func(i, j int) bool {
+		return probs[indices[i]].Data > probs[indices[j]].Data
+	})
+	if len(indices) > k {
+		indices = indices[:k]
+	}
+
+	out := make([]TraceCandidate, 0, len(indices))
+	for _, idx := range indices {
+		out = append(out, TraceCandidate{
+			Char:    tokenLabel(idx, bos, chars),
+			TokenID: idx,
+			Logit:   logits[idx].Data,
+			Prob:    probs[idx].Data,
+		})
+	}
+	return out
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	webRoot, err := fs.Sub(webFS, "web")
@@ -447,6 +501,79 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"text": strings.Join(sample, ""),
+		})
+	})
+
+	http.HandleFunc("/api/generate_trace", func(w http.ResponseWriter, r *http.Request) {
+		if globalModel == nil {
+			http.Error(w, "Model not initialized", 400)
+			return
+		}
+		globalModel.mu.Lock()
+		defer globalModel.mu.Unlock()
+
+		tokenID := globalModel.BOS
+		sample := []string{}
+		keys := make([][][]*Value, globalModel.Config.NLayer)
+		values := make([][][]*Value, globalModel.Config.NLayer)
+		steps := []TraceStep{}
+		stopReason := "Reached block size limit"
+
+		for pos := 0; pos < globalModel.Config.BlockSize; pos++ {
+			logits := globalModel.Forward(tokenID, pos, keys, values)
+			probs := globalModel.Softmax(logits)
+			topK := topKCandidates(logits, probs, globalModel.Chars, globalModel.BOS, 5)
+
+			rnd := rand.Float64()
+			cumulative := 0.0
+			newTokenID := globalModel.BOS
+			chosenProb := 0.0
+			for idx, p := range probs {
+				cumulative += p.Data
+				if rnd < cumulative {
+					newTokenID = idx
+					chosenProb = p.Data
+					break
+				}
+			}
+
+			reason := fmt.Sprintf(
+				"Chosen '%s' because cumulative probability %.4f crossed random draw %.4f.",
+				tokenLabel(newTokenID, globalModel.BOS, globalModel.Chars),
+				cumulative,
+				rnd,
+			)
+			if len(topK) > 0 && topK[0].TokenID != newTokenID {
+				reason += fmt.Sprintf(
+					" Highest-probability option was '%s' at %.4f, but sampling selected a different valid token.",
+					topK[0].Char,
+					topK[0].Prob,
+				)
+			}
+
+			steps = append(steps, TraceStep{
+				Position:   pos,
+				Context:    strings.Join(sample, ""),
+				TopK:       topK,
+				RandomU:    rnd,
+				ChosenChar: tokenLabel(newTokenID, globalModel.BOS, globalModel.Chars),
+				ChosenProb: chosenProb,
+				Reason:     reason,
+			})
+
+			if newTokenID == globalModel.BOS {
+				stopReason = "Model selected <END> token"
+				break
+			}
+			sample = append(sample, globalModel.Chars[newTokenID])
+			tokenID = newTokenID
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(GenerateTraceResponse{
+			Text:       strings.Join(sample, ""),
+			Steps:      steps,
+			StopReason: stopReason,
 		})
 	})
 

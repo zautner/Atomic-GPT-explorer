@@ -250,8 +250,16 @@
                         <div class="w-full h-32 border-2 border-black bg-white flex items-center justify-center p-4">
                             <div id="generatedText" class="code-font text-3xl font-bold">???</div>
                         </div>
-                        <button id="generateBtn" class="mac-button w-full py-4 text-lg">Generate Next Word</button>
+                        <div class="w-full grid grid-cols-2 gap-2">
+                            <button id="generateBtn" class="mac-button py-4 text-lg">Generate</button>
+                            <button id="traceBtn" class="mac-button py-4 text-lg">Explain Choice</button>
+                        </div>
                         <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
+                        <div id="tracePanel" class="w-full border border-black bg-white p-2 text-xs hidden">
+                            <p class="font-bold mb-2">Inference Trace</p>
+                            <p id="traceSummary" class="mb-2"></p>
+                            <div id="traceList" class="max-h-44 overflow-y-auto space-y-2"></div>
+                        </div>
                     </div>
                 </section>
             </div>

@@ -28,7 +28,11 @@
     startTrainBtn: document.getElementById("startTrainBtn"),
     stopTrainBtn: document.getElementById("stopTrainBtn"),
     generateBtn: document.getElementById("generateBtn"),
+    traceBtn: document.getElementById("traceBtn"),
     generatedText: document.getElementById("generatedText"),
+    tracePanel: document.getElementById("tracePanel"),
+    traceSummary: document.getElementById("traceSummary"),
+    traceList: document.getElementById("traceList"),
     lossCanvas: document.getElementById("lossCanvas"),
     lossLabel: document.getElementById("lossLabel"),
     paramCount: document.getElementById("paramCount"),
@@ -184,6 +188,53 @@
     }
     const data = await res.json();
     el.generatedText.textContent = data.text || "???";
+    el.tracePanel.classList.add("hidden");
+    el.traceList.innerHTML = "";
+    el.traceSummary.textContent = "";
+  }
+
+  function renderTrace(traceData) {
+    el.traceList.innerHTML = "";
+    el.traceSummary.textContent = "Stop reason: " + (traceData.stop_reason || "unknown");
+    el.tracePanel.classList.remove("hidden");
+
+    (traceData.steps || []).forEach(function (step) {
+      const card = document.createElement("div");
+      card.className = "border border-black p-2";
+
+      const title = document.createElement("p");
+      title.className = "font-bold";
+      title.textContent = "Step " + String(step.position + 1) + " | Context: " + (step.context || "(empty)");
+
+      const chosen = document.createElement("p");
+      chosen.textContent =
+        "Chosen: '" + step.chosen_char + "' (p=" + Number(step.chosen_prob || 0).toFixed(4) + "), random_u=" + Number(step.random_u || 0).toFixed(4);
+
+      const reason = document.createElement("p");
+      reason.textContent = step.reason || "";
+
+      const top = document.createElement("p");
+      const topText = (step.top_k || []).map(function (c) {
+        return "'" + c.char + "' " + Number(c.prob || 0).toFixed(4);
+      }).join(" | ");
+      top.textContent = "Top options: " + topText;
+
+      card.appendChild(title);
+      card.appendChild(chosen);
+      card.appendChild(top);
+      card.appendChild(reason);
+      el.traceList.appendChild(card);
+    });
+  }
+
+  async function runInferenceTrace() {
+    const res = await fetch("/api/generate_trace", { method: "POST" });
+    if (!res.ok) {
+      throw new Error("trace inference request failed");
+    }
+    const data = await res.json();
+    el.generatedText.textContent = data.text || "???";
+    renderTrace(data);
   }
 
   function showExplanation(topic) {
@@ -215,6 +266,9 @@
     el.stopTrainBtn.addEventListener("click", stopTraining);
     el.generateBtn.addEventListener("click", function () {
       runInference().catch(console.error);
+    });
+    el.traceBtn.addEventListener("click", function () {
+      runInferenceTrace().catch(console.error);
     });
     el.addDocBtn.addEventListener("click", function () {
       const value = (el.newDocInput.value || "").trim().toLowerCase();
