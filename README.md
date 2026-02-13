@@ -18,6 +18,9 @@ go run .
 Open:
 - http://127.0.0.1:8080/
 
+Live website:
+- http://atomicgpt.duckdns.org:8080/
+
 ## Build
 
 ```bash
