@@ -125,7 +125,6 @@ type Model struct {
 	BOS       int
 	Params    []*Value
 	State     map[string][][]*Value
-	Feedback  [][]float64
 	AdamM     []float64
 	AdamV     []float64
 	Steps     int
@@ -154,10 +153,6 @@ func NewModel(config Config, docs []string) *Model {
 		Chars:     chars,
 		BOS:       bos,
 		State:     make(map[string][][]*Value),
-		Feedback:  make([][]float64, vocabSize),
-	}
-	for i := 0; i < vocabSize; i++ {
-		m.Feedback[i] = make([]float64, vocabSize)
 	}
 
 	createMatrix := func(rows, cols int) [][]*Value {
@@ -190,67 +185,6 @@ func NewModel(config Config, docs []string) *Model {
 	m.AdamV = make([]float64, len(m.Params))
 
 	return m
-}
-
-func clamp(v, lo, hi float64) float64 {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
-}
-
-func (m *Model) TextToTokens(text string) []int {
-	charToID := make(map[string]int, len(m.Chars))
-	for i, ch := range m.Chars {
-		charToID[ch] = i
-	}
-	tokens := make([]int, 0, len(text))
-	for _, r := range strings.ToLower(text) {
-		if id, ok := charToID[string(r)]; ok {
-			tokens = append(tokens, id)
-		}
-	}
-	return tokens
-}
-
-func (m *Model) ApplyFeedback(text string, rating int) int {
-	tokens := m.TextToTokens(text)
-	if len(tokens) == 0 {
-		return 0
-	}
-	delta := 0.12
-	if rating < 0 {
-		delta = -delta
-	}
-	applied := 0
-	prev := m.BOS
-	for i, next := range tokens {
-		weight := 1.0
-		if i < 3 {
-			weight = 1.35
-		}
-		updated := m.Feedback[prev][next]*0.92 + delta*weight
-		m.Feedback[prev][next] = clamp(updated, -1.2, 1.2)
-		prev = next
-		applied++
-	}
-	m.Feedback[prev][m.BOS] = clamp(m.Feedback[prev][m.BOS]*0.92+delta, -1.2, 1.2)
-	applied++
-	return applied
-}
-
-func (m *Model) ApplyFeedbackBias(prevToken int, pos int, logits []*Value) {
-	// Stronger near sequence start; fades with position to preserve base model fluency.
-	phaseScale := 1.6 * math.Exp(-0.03*float64(pos))
-	for next := 0; next < len(logits); next++ {
-		bias := m.Feedback[prevToken][next]
-		if math.Abs(bias) >= 0.01 {
-			logits[next] = logits[next].Add(NewValue(phaseScale * bias))
-		}
-	}
 }
 
 func (m *Model) Linear(x []*Value, w [][]*Value) []*Value {
@@ -420,6 +354,9 @@ type TraceStep struct {
 	RandomU    float64          `json:"random_u"`
 	ChosenChar string           `json:"chosen_char"`
 	ChosenProb float64          `json:"chosen_prob"`
+	ChosenRank int              `json:"chosen_rank"`
+	CumBefore  float64          `json:"cum_before"`
+	CumAfter   float64          `json:"cum_after"`
 	Reason     string           `json:"reason"`
 }
 
@@ -427,16 +364,6 @@ type GenerateTraceResponse struct {
 	Text       string      `json:"text"`
 	Steps      []TraceStep `json:"steps"`
 	StopReason string      `json:"stop_reason"`
-}
-
-type FeedbackRequest struct {
-	Text   string `json:"text"`
-	Rating int    `json:"rating"`
-}
-
-type FeedbackResponse struct {
-	Status  string `json:"status"`
-	Applied int    `json:"applied"`
 }
 
 func tokenLabel(tokenID, bos int, chars []string) string {
@@ -584,7 +511,6 @@ func main() {
 
 		for pos := 0; pos < globalModel.Config.BlockSize; pos++ {
 			logits := globalModel.Forward(tokenID, pos, keys, values)
-			globalModel.ApplyFeedbackBias(tokenID, pos, logits)
 			probs := globalModel.Softmax(logits)
 
 			// Sampling
@@ -629,32 +555,42 @@ func main() {
 
 		for pos := 0; pos < globalModel.Config.BlockSize; pos++ {
 			logits := globalModel.Forward(tokenID, pos, keys, values)
-			globalModel.ApplyFeedbackBias(tokenID, pos, logits)
 			probs := globalModel.Softmax(logits)
 			topK := topKCandidates(logits, probs, globalModel.Chars, globalModel.BOS, 5)
 
 			rnd := rand.Float64()
 			cumulative := 0.0
+			cumBefore := 0.0
 			newTokenID := globalModel.BOS
 			chosenProb := 0.0
 			for idx, p := range probs {
+				prevCum := cumulative
 				cumulative += p.Data
 				if rnd < cumulative {
 					newTokenID = idx
 					chosenProb = p.Data
+					cumBefore = prevCum
+					break
+				}
+			}
+			chosenRank := len(probs)
+			for rank, cand := range topK {
+				if cand.TokenID == newTokenID {
+					chosenRank = rank + 1
 					break
 				}
 			}
 
 			reason := fmt.Sprintf(
-				"Chosen '%s' because cumulative probability %.4f crossed random draw %.4f.",
+				"Chosen '%s' because draw %.4f fell inside cumulative interval [%.4f, %.4f) in vocabulary index order.",
 				tokenLabel(newTokenID, globalModel.BOS, globalModel.Chars),
-				cumulative,
 				rnd,
+				cumBefore,
+				cumulative,
 			)
 			if len(topK) > 0 && topK[0].TokenID != newTokenID {
 				reason += fmt.Sprintf(
-					" Highest-probability option was '%s' at %.4f, but sampling selected a different valid token.",
+					" Highest-probability option was '%s' at %.4f, but stochastic sampling can still pick lower-ranked valid options.",
 					topK[0].Char,
 					topK[0].Prob,
 				)
@@ -667,6 +603,9 @@ func main() {
 				RandomU:    rnd,
 				ChosenChar: tokenLabel(newTokenID, globalModel.BOS, globalModel.Chars),
 				ChosenProb: chosenProb,
+				ChosenRank: chosenRank,
+				CumBefore:  cumBefore,
+				CumAfter:   cumulative,
 				Reason:     reason,
 			})
 
@@ -683,36 +622,6 @@ func main() {
 			Text:       strings.Join(sample, ""),
 			Steps:      steps,
 			StopReason: stopReason,
-		})
-	})
-
-	http.HandleFunc("/api/feedback", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		if globalModel == nil {
-			http.Error(w, "Model not initialized", 400)
-			return
-		}
-
-		var req FeedbackRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", 400)
-			return
-		}
-		if req.Rating != 1 && req.Rating != -1 {
-			http.Error(w, "Rating must be +1 or -1", 400)
-			return
-		}
-
-		globalModel.mu.Lock()
-		applied := globalModel.ApplyFeedback(req.Text, req.Rating)
-		globalModel.mu.Unlock()
-
-		_ = json.NewEncoder(w).Encode(FeedbackResponse{
-			Status:  "ok",
-			Applied: applied,
 		})
 	})
 

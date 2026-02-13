@@ -11,10 +11,10 @@
     paramCount: 0,
     isInitialized: false,
     explanationByTopic: {
-      "Autograd": "Autograd tracks every math operation as a graph of Values. During backpropagation, each Value receives gradients that show how much it affected loss.",
-      "Transformer": "The model combines token and position embeddings, applies attention and MLP layers, then projects to logits for next-character prediction.",
-      "Attention": "Attention computes query-key similarity, turns scores into weights with softmax, and builds context vectors as weighted sums of value vectors.",
-      "Go Backend": "The Go backend runs training and inference endpoints, updates weights with Adam, and serializes JSON responses for the browser."
+      "Autograd": "What it is:\nAutograd is an automatic way to compute derivatives. Every math operation creates a node that stores both a value (Data) and how sensitive loss is to that value (Grad).\n\nHow it works here:\n1) Forward pass: the model computes logits and loss.\n2) Backward pass: gradients are propagated from loss back through all connected nodes using the chain rule.\n3) Update: Adam uses those gradients to nudge parameters in directions that should reduce future loss.\n\nWhy it matters:\nWithout autograd, each derivative would need to be hand-coded and easy to break. With autograd, the model can safely combine many operations and still learn from errors.",
+      "Transformer": "What it is:\nA Transformer is a next-token predictor built from repeated blocks. Each block mixes information across positions (attention) and then transforms features (MLP).\n\nHow it works in this app:\n1) Character token + position embedding are combined.\n2) RMSNorm stabilizes magnitudes.\n3) Attention reads prior context using query/key/value projections.\n4) Residual connection keeps useful prior signal.\n5) MLP expands then compresses features for richer representation.\n6) Final linear head converts features to logits over possible next characters.\n\nWhy it matters:\nThis structure can model dependencies between distant characters while remaining efficient enough for iterative training and generation in a browser-connected demo.",
+      "Attention": "What it is:\nAttention is a weighted lookup over previous tokens. At each step, the model asks: 'Which earlier positions are most relevant to predicting the next character?'\n\nHow the score is formed:\n- Query (current state) is compared with Keys (past states).\n- Dot products are scaled, then softmax converts them into probabilities.\n- Those probabilities weight the Values (past content) to build a context vector.\n\nInterpretation:\nHigher attention weight means that prior token had more influence on this step. In trace output, top candidates reflect the combined effect of these context-aware features plus output projection.",
+      "Go Backend": "What it is:\nThe Go backend is the execution engine for model state, math, and APIs. The UI only visualizes data; learning and sampling happen in Go.\n\nRuntime responsibilities:\n- /api/init: build model parameters from docs + config.\n- /api/train: run one training step and return metrics for chart/feedback panel.\n- /api/generate: sample next-token sequence from current model state.\n- /api/generate_trace: return step-by-step candidate probabilities and selection reasons.\n\nWhy Go helps here:\nGo gives predictable performance, simple concurrency control via mutexes, and easy deployment as a single binary serving both model APIs and static UI assets."
     }
   };
 
@@ -34,8 +34,6 @@
     stopTrainBtn: document.getElementById("stopTrainBtn"),
     generateBtn: document.getElementById("generateBtn"),
     traceBtn: document.getElementById("traceBtn"),
-    feedbackUpBtn: document.getElementById("feedbackUpBtn"),
-    feedbackDownBtn: document.getElementById("feedbackDownBtn"),
     generatedText: document.getElementById("generatedText"),
     traceWindow: document.getElementById("traceWindow"),
     traceSummary: document.getElementById("traceSummary"),
@@ -187,39 +185,40 @@
       }).concat([5])
     );
 
-    ctx.lineWidth = 2;
-    for (let i = 1; i < state.trainProgress.length; i += 1) {
-      const prev = state.trainProgress[i - 1];
-      const curr = state.trainProgress[i];
-      const x1 = ((i - 1) / 49) * w;
-      const y1 = h - (prev.loss / maxLoss) * h;
-      const x2 = (i / 49) * w;
-      const y2 = h - (curr.loss / maxLoss) * h;
-      ctx.strokeStyle = confidenceColorRGB(Number(curr.targetProb || 0));
+    // Keep trend line neutral for readability.
+    ctx.strokeStyle = "#111111";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    state.trainProgress.forEach(function (p, i) {
+      const x = (i / 49) * w;
+      const y = h - (p.loss / maxLoss) * h;
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.stroke();
+
+    // Overlay confidence as subtle dots.
+    state.trainProgress.forEach(function (p, i) {
+      const x = (i / 49) * w;
+      const y = h - (p.loss / maxLoss) * h;
+      const prob = Number(p.targetProb || 0);
+      let color = "#b00020";
+      if (prob >= 0.9) {
+        color = "#0a7a0a";
+      } else if (prob >= 0.65) {
+        color = "#b58900";
+      }
+      ctx.fillStyle = color;
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 0.6;
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
+      ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
       ctx.stroke();
-    }
-  }
-
-  function confidenceColorRGB(value) {
-    const v = Math.max(0, Math.min(1, value));
-    const red = { r: 176, g: 0, b: 32 };
-    const yellow = { r: 181, g: 137, b: 0 };
-    const green = { r: 10, g: 122, b: 10 };
-
-    function lerp(a, b, t) {
-      return Math.round(a + (b - a) * t);
-    }
-
-    if (v <= 0.65) {
-      const t = v / 0.65;
-      return "rgb(" + lerp(red.r, yellow.r, t) + ", " + lerp(red.g, yellow.g, t) + ", " + lerp(red.b, yellow.b, t) + ")";
-    }
-
-    const t = (v - 0.65) / 0.35;
-    return "rgb(" + lerp(yellow.r, green.r, t) + ", " + lerp(yellow.g, green.g, t) + ", " + lerp(yellow.b, green.b, t) + ")";
+    });
   }
 
   async function startTraining() {
@@ -298,24 +297,38 @@
 
       const title = document.createElement("p");
       title.className = "font-bold";
-      title.textContent = "Step " + String(step.position + 1) + " | Context: " + (step.context || "(empty)");
+      title.textContent = "Step " + String(step.position + 1);
+
+      const context = document.createElement("p");
+      context.textContent = "Context: " + (step.context || "(empty)");
 
       const chosen = document.createElement("p");
       chosen.textContent =
-        "Chosen: '" + step.chosen_char + "' (p=" + Number(step.chosen_prob || 0).toFixed(4) + "), random_u=" + Number(step.random_u || 0).toFixed(4);
+        "Chosen token: '" + step.chosen_char + "'  |  p=" + Number(step.chosen_prob || 0).toFixed(4) + "  |  draw=" + Number(step.random_u || 0).toFixed(4);
+
+      const interval = document.createElement("p");
+      interval.textContent =
+        "Sampling interval: [" + Number(step.cum_before || 0).toFixed(4) + ", " + Number(step.cum_after || 0).toFixed(4) +
+        ")  |  Rank by probability: #" + String(step.chosen_rank || "?");
 
       const reason = document.createElement("p");
-      reason.textContent = step.reason || "";
+      reason.textContent = "Why: " + (step.reason || "");
 
       const top = document.createElement("p");
-      const topText = (step.top_k || []).map(function (c) {
+      const topText = (step.top_k || []).slice(0, 3).map(function (c) {
         return "'" + c.char + "' " + Number(c.prob || 0).toFixed(4);
       }).join(" | ");
-      top.textContent = "Top options: " + topText;
+      top.textContent = "Top by probability: " + topText;
+
+      const note = document.createElement("p");
+      note.textContent = "Note: top list is sorted by probability; sampling walks full vocabulary index order.";
 
       card.appendChild(title);
+      card.appendChild(context);
       card.appendChild(chosen);
+      card.appendChild(interval);
       card.appendChild(top);
+      card.appendChild(note);
       card.appendChild(reason);
       el.traceList.appendChild(card);
     });
@@ -329,23 +342,6 @@
     const data = await res.json();
     el.generatedText.textContent = data.text || "???";
     renderTrace(data);
-  }
-
-  async function sendFeedback(rating) {
-    const text = (el.generatedText.textContent || "").trim();
-    if (!text || text === "???") {
-      return;
-    }
-    const res = await fetch("/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: text, rating: rating })
-    });
-    if (!res.ok) {
-      throw new Error("feedback request failed");
-    }
-    const data = await res.json();
-    return Number(data.applied || 0);
   }
 
   function showExplanation(topic) {
@@ -385,22 +381,6 @@
         setTraceEnabled(true);
         runInferenceTrace().catch(console.error);
       }
-    });
-    el.feedbackUpBtn.addEventListener("click", function () {
-      sendFeedback(1).then(function (applied) {
-        el.feedbackUpBtn.textContent = "+ Saved (" + String(applied) + ")";
-        setTimeout(function () {
-          el.feedbackUpBtn.textContent = "+ Useful";
-        }, 600);
-      }).catch(console.error);
-    });
-    el.feedbackDownBtn.addEventListener("click", function () {
-      sendFeedback(-1).then(function (applied) {
-        el.feedbackDownBtn.textContent = "- Saved (" + String(applied) + ")";
-        setTimeout(function () {
-          el.feedbackDownBtn.textContent = "- Unhelpful";
-        }, 600);
-      }).catch(console.error);
     });
     el.menuTheory.addEventListener("click", function () {
       setActiveTab("theory");

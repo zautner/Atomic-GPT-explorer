@@ -270,7 +270,7 @@
                         </div>
                         <div id="explanationBox" class="border border-black p-3 text-xs bg-slate-50 mt-4 hidden">
                             <p class="font-bold mb-1">Guide Explanation:</p>
-                            <div id="explanationText"></div>
+                            <div id="explanationText" class="text-[11px] leading-snug whitespace-pre-line"></div>
                         </div>
                     </div>
                 </section>
@@ -287,9 +287,18 @@
 
                         <div class="p-2 border border-black bg-white">
                             <canvas id="lossCanvas" width="600" height="200"></canvas>
-                            <div class="flex justify-between text-[10px] mt-1">
+                            <div class="flex justify-between items-center text-[10px] mt-1">
                                 <span>Step History (Last 50)</span>
                                 <span id="lossLabel">Current Loss: N/A</span>
+                            </div>
+                            <div class="text-[10px] mt-1 space-y-1">
+                                <p><span style="display:inline-block;width:14px;height:2px;background:#111111;vertical-align:middle;margin-right:4px;"></span>Line = Loss trend</p>
+                                <p>Dot color = Target Confidence:</p>
+                                <div class="flex gap-3">
+                                    <span class="flex items-center gap-1"><span style="display:inline-block;width:8px;height:8px;border:1px solid black;background:#0a7a0a;"></span>High (>= 0.90)</span>
+                                    <span class="flex items-center gap-1"><span style="display:inline-block;width:8px;height:8px;border:1px solid black;background:#b58900;"></span>Mid (0.65-0.89)</span>
+                                    <span class="flex items-center gap-1"><span style="display:inline-block;width:8px;height:8px;border:1px solid black;background:#b00020;"></span>Low (&lt; 0.65)</span>
+                                </div>
                             </div>
                         </div>
 
@@ -324,10 +333,6 @@
                         <div class="w-full grid grid-cols-2 gap-2">
                             <button id="generateBtn" class="mac-button py-4 text-lg">Generate</button>
                             <button id="traceBtn" class="mac-button py-4 text-lg">Explain Choice: Off</button>
-                        </div>
-                        <div class="w-full grid grid-cols-2 gap-2">
-                            <button id="feedbackUpBtn" class="mac-button">+ Useful</button>
-                            <button id="feedbackDownBtn" class="mac-button">- Unhelpful</button>
                         </div>
                         <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
                     </div>
