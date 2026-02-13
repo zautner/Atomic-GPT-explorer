@@ -77,12 +77,18 @@
 
   function getConfidenceColor(value) {
     if (value < 0.65) {
-      return "#b00020";
+      return "confidence-low";
     }
     if (value < 0.9) {
-      return "#b58900";
+      return "confidence-mid";
     }
-    return "#0a7a0a";
+    return "confidence-high";
+  }
+
+  function setTargetConfidenceClass(value) {
+    const cls = getConfidenceColor(value);
+    el.targetProb.classList.remove("confidence-high", "confidence-mid", "confidence-low");
+    el.targetProb.classList.add(cls);
   }
 
   function setActiveTab(tab) {
@@ -124,7 +130,7 @@
     el.predictedChar.textContent = "N/A";
     el.targetProb.textContent = "0.0000";
     el.predictedProb.textContent = "0.0000";
-    el.targetProb.style.color = getConfidenceColor(1);
+    setTargetConfidenceClass(1);
     el.tokenTape.textContent = "-";
     drawChart();
   }
@@ -219,7 +225,7 @@
         el.predictedChar.textContent = data.predicted_char || "N/A";
         const targetProb = Number(data.target_prob || 0);
         el.targetProb.textContent = targetProb.toFixed(4);
-        el.targetProb.style.color = getConfidenceColor(targetProb);
+        setTargetConfidenceClass(targetProb);
         el.predictedProb.textContent = Number(data.predicted_prob || 0).toFixed(4);
         if (!state.recentPredictions) {
           state.recentPredictions = [];
