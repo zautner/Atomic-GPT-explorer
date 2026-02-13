@@ -3,14 +3,14 @@
 
   const state = {
     activeTab: "theory",
-    docs: ["alex", "james", "mary", "anna", "john", "emily", "luke", "olivia", "noah", "sophia"],
+    docs: ["alex", "james", "mary", "anna", "john", "emily", "luke", "olivia", "noah", "sophia", "inna", "vitaly", "daniel", "liza"],
     isTraining: false,
     traceEnabled: false,
     trainProgress: [],
     recentPredictions: [],
     trainOptions: {
-      stepsPerCall: 2,
-      batchSize: 4
+      stepsPerCall: 1,
+      batchSize: 6
     },
     generateOptions: {
       temperature: 0.7,
@@ -124,10 +124,10 @@
 
   function readTrainOptions() {
     state.trainOptions.stepsPerCall = Math.round(
-      clampNumber(el.trainStepsInput.value, 1, 20, 2)
+      clampNumber(el.trainStepsInput.value, 1, 20, 1)
     );
     state.trainOptions.batchSize = Math.round(
-      clampNumber(el.trainBatchInput.value, 1, 64, 4)
+      clampNumber(el.trainBatchInput.value, 1, 64, 6)
     );
     el.trainStepsInput.value = String(state.trainOptions.stepsPerCall);
     el.trainBatchInput.value = String(state.trainOptions.batchSize);
@@ -156,7 +156,7 @@
       el.topKInput.value = "8";
       el.minLenInput.value = "2";
     } else if (kind === "random") {
-      el.tempInput.value = "1.2";
+      el.tempInput.value = "1.6";
       el.topKInput.value = "16";
       el.minLenInput.value = "1";
     }

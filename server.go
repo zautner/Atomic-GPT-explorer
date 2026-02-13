@@ -107,11 +107,11 @@ func (s *Server) handleTrain(w http.ResponseWriter, r *http.Request) {
 	}
 	stepsPerCall := req.StepsPerCall
 	if stepsPerCall <= 0 {
-		stepsPerCall = 2
+		stepsPerCall = 1
 	}
 	batchSize := req.BatchSize
 	if batchSize <= 0 {
-		batchSize = 4
+		batchSize = 6
 	}
 
 	resp, err := TrainBatchedSteps(model, docs, stepsPerCall, batchSize)
