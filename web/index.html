@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atomic GPT - System 7.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Public+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --mac-teal: #55aaaa;
+        }
+
+        body {
+            font-family: 'Public Sans', 'Geneva', sans-serif;
+            background-color: var(--mac-teal);
+            color: black;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .code-font {
+            font-family: 'Fira Code', 'Monaco', monospace;
+        }
+
+        .menu-bar {
+            height: 22px;
+            background: white;
+            border-bottom: 1px solid black;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 1000;
+            position: relative;
+        }
+
+        .menu-item {
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .menu-item:hover {
+            background: black;
+            color: white;
+        }
+
+        .mac-window {
+            background: white;
+            border: 1px solid black;
+            box-shadow: 2px 2px 0 black;
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mac-title-bar {
+            height: 20px;
+            background: white;
+            border-bottom: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            position: relative;
+        }
+
+        .mac-title-bar-lines {
+            position: absolute;
+            left: 25px;
+            right: 25px;
+            height: 10px;
+            background: repeating-linear-gradient(0deg, black, black 1px, transparent 1px, transparent 2px);
+            opacity: 0.8;
+        }
+
+        .mac-close-box {
+            width: 12px;
+            height: 12px;
+            border: 1px solid black;
+            position: absolute;
+            left: 5px;
+            background: white;
+        }
+
+        .mac-title-text {
+            background: white;
+            padding: 0 10px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 1;
+            text-transform: uppercase;
+        }
+
+        .mac-content {
+            flex: 1;
+            overflow: auto;
+            padding: 10px;
+        }
+
+        .mac-content::-webkit-scrollbar {
+            width: 16px;
+        }
+
+        .mac-content::-webkit-scrollbar-track {
+            background: white;
+            border-left: 1px solid black;
+        }
+
+        .mac-content::-webkit-scrollbar-thumb {
+            background: repeating-linear-gradient(45deg, #ccc, #ccc 1px, white 1px, white 2px);
+            border: 1px solid black;
+        }
+
+        .mac-button {
+            border: 1px solid black;
+            background: white;
+            padding: 4px 15px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 1px 1px 0 black;
+            cursor: pointer;
+        }
+
+        .mac-button:active {
+            background: black;
+            color: white;
+            box-shadow: none;
+            transform: translate(1px, 1px);
+        }
+
+        .mac-tabs {
+            display: flex;
+            border-bottom: 1px solid black;
+            margin-bottom: 10px;
+        }
+
+        .mac-tab {
+            padding: 5px 15px;
+            font-size: 12px;
+            border: 1px solid black;
+            border-bottom: none;
+            margin-right: 2px;
+            background: #eee;
+            cursor: pointer;
+        }
+
+        .mac-tab.active {
+            background: white;
+            font-weight: bold;
+            position: relative;
+            top: 1px;
+        }
+
+        #lossCanvas {
+            border: 1px solid black;
+            background: white;
+        }
+
+        .mac-input {
+            border: 1px solid black;
+            padding: 3px 6px;
+            font-size: 12px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu-bar">
+        <div class="menu-item"></div>
+        <div class="menu-item">File</div>
+        <div class="menu-item">Edit</div>
+        <div class="menu-item">Special</div>
+        <div class="menu-item">GPT</div>
+        <div class="menu-item" onclick="window.location.href='/docs/index.html'">Help Guide</div>
+    </div>
+
+    <div class="p-4 relative h-full">
+        <div class="mac-window" style="top: 40px; left: 40px; width: 700px; height: 500px;">
+            <div class="mac-title-bar">
+                <div class="mac-close-box"></div>
+                <div class="mac-title-bar-lines"></div>
+                <div class="mac-title-text">Atomic GPT Explorer 1.0</div>
+            </div>
+
+            <div class="mac-tabs px-2 pt-2">
+                <button id="tab-theory" class="mac-tab active">Theory</button>
+                <button id="tab-train" class="mac-tab">Training</button>
+                <button id="tab-inference" class="mac-tab">Inference</button>
+            </div>
+
+            <div class="mac-content">
+                <section id="view-theory">
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-bold">System Architecture</h2>
+                        <p class="text-sm italic">Atomic GPT uses a Go-based Autograd engine to compute gradients for a minimalist Transformer.</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button data-topic="Autograd" class="mac-button explain-btn">About Autograd</button>
+                            <button data-topic="Transformer" class="mac-button explain-btn">About Transformer</button>
+                            <button data-topic="Attention" class="mac-button explain-btn">About Attention</button>
+                            <button data-topic="Go Backend" class="mac-button explain-btn">About Go Backend</button>
+                        </div>
+                        <div id="explanationBox" class="border border-black p-3 text-xs bg-slate-50 mt-4 hidden">
+                            <p class="font-bold mb-1">Guide Explanation:</p>
+                            <div id="explanationText"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="view-train" class="hidden">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-lg font-bold">Model Training</h2>
+                            <div class="flex gap-2">
+                                <button id="startTrainBtn" class="mac-button">Start Train</button>
+                                <button id="stopTrainBtn" class="mac-button hidden">Stop Train</button>
+                            </div>
+                        </div>
+
+                        <div class="p-2 border border-black bg-white">
+                            <canvas id="lossCanvas" width="600" height="200"></canvas>
+                            <div class="flex justify-between text-[10px] mt-1">
+                                <span>Step History (Last 50)</span>
+                                <span id="lossLabel">Current Loss: N/A</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 text-xs">
+                            <div class="border border-black p-2">
+                                <p class="font-bold">Model Stats</p>
+                                <p>Params: <span id="paramCount">0</span></p>
+                                <p>Language: Go 1.21+</p>
+                            </div>
+                            <div class="border border-black p-2">
+                                <p class="font-bold">Optimizer</p>
+                                <p>Type: Adam</p>
+                                <p>Rate: 0.05</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="view-inference" class="hidden">
+                    <div class="space-y-4 flex flex-col items-center">
+                        <h2 class="text-lg font-bold w-full">Hallucination Node</h2>
+                        <div class="w-full h-32 border-2 border-black bg-white flex items-center justify-center p-4">
+                            <div id="generatedText" class="code-font text-3xl font-bold">???</div>
+                        </div>
+                        <button id="generateBtn" class="mac-button w-full py-4 text-lg">Generate Next Word</button>
+                        <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="mac-window" style="top: 100px; left: 760px; width: 250px; height: 400px;">
+            <div class="mac-title-bar">
+                <div class="mac-close-box"></div>
+                <div class="mac-title-bar-lines"></div>
+                <div class="mac-title-text">Training Data</div>
+            </div>
+            <div class="mac-content flex flex-col">
+                <div class="flex gap-1 mb-2">
+                    <input id="newDocInput" type="text" placeholder="Add entry..." class="mac-input flex-1">
+                    <button id="addDocBtn" class="mac-button">+</button>
+                </div>
+                <div id="docsList" class="flex-1 border border-black overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

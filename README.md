@@ -1,20 +1,31 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Atomic GPT Explorer (Pure Go)
 
-# Run and deploy your AI Studio app
+This project now runs as a single Go application:
+- Go backend API
+- Go-served static frontend (no Node.js, no Vite, no TypeScript)
 
-This contains everything you need to run your app locally.
+## Requirements
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Xg_2dAYECx5IesK3yj_q_Ehu36ppt37z
+- Go 1.21+
 
-## Run Locally
+## Run
 
-**Prerequisites:**  Node.js
+```bash
+go run main.go
+```
 
+Open:
+- http://127.0.0.1:8080/
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Build
+
+```bash
+go build ./...
+```
+
+## Project layout
+
+- `main.go`: model + API + static file serving
+- `web/index.html`: main UI
+- `web/app.js`: browser logic
+- `web/docs/index.html`: help page

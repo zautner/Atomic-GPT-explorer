@@ -1,2 +1,3 @@
-��n�止h��
-m���
+module atomic-gpt-explorer
+
+go 1.21

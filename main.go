@@ -1,9 +1,11 @@
-
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
+	"log"
 	"math"
 	"math/rand"
 	"net/http"
@@ -12,6 +14,9 @@ import (
 	"sync"
 	"time"
 )
+
+//go:embed web/*
+var webFS embed.FS
 
 // --- Autograd Engine ---
 
@@ -221,7 +226,7 @@ func (m *Model) RMSNorm(x []*Value) []*Value {
 	for _, xi := range x {
 		sumSq = sumSq.Add(xi.Mul(xi))
 	}
-	ms := sumSq.Mul(1.0 / float64(len(x)))
+	ms := sumSq.Mul(NewValue(1.0 / float64(len(x))))
 	scale := ms.Add(NewValue(1e-5)).Pow(-0.5)
 	out := make([]*Value, len(x))
 	for i, xi := range x {
@@ -256,7 +261,7 @@ func (m *Model) Forward(tokenID, posID int, keys, values [][][]*Value) []*Value 
 		for h := 0; h < m.Config.NHead; h++ {
 			hs := h * headDim
 			qH := q[hs : hs+headDim]
-			
+
 			attnLogits := make([]*Value, len(keys[li]))
 			for t := 0; t < len(keys[li]); t++ {
 				dot := NewValue(0)
@@ -267,7 +272,7 @@ func (m *Model) Forward(tokenID, posID int, keys, values [][][]*Value) []*Value 
 				attnLogits[t] = dot.Mul(NewValue(1.0 / math.Sqrt(float64(headDim))))
 			}
 			attnWeights := m.Softmax(attnLogits)
-			
+
 			headOut := make([]*Value, headDim)
 			for j := 0; j < headDim; j++ {
 				sum := NewValue(0)
@@ -332,6 +337,10 @@ type TrainResponse struct {
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	webRoot, err := fs.Sub(webFS, "web")
+	if err != nil {
+		log.Fatalf("failed to load web assets: %v", err)
+	}
 
 	http.HandleFunc("/api/init", func(w http.ResponseWriter, r *http.Request) {
 		var req InitRequest
@@ -348,6 +357,10 @@ func main() {
 	http.HandleFunc("/api/train", func(w http.ResponseWriter, r *http.Request) {
 		if globalModel == nil {
 			http.Error(w, "Model not initialized", 400)
+			return
+		}
+		if len(globalDocs) == 0 {
+			http.Error(w, "No training documents provided", 400)
 			return
 		}
 		globalModel.mu.Lock()
@@ -378,7 +391,7 @@ func main() {
 			logits := globalModel.Forward(tokens[pos], pos, keys, values)
 			probs := globalModel.Softmax(logits)
 			loss := probs[tokens[pos+1]].Log().Mul(NewValue(-1))
-			losses.append(loss)
+			losses = append(losses, loss)
 		}
 
 		totalLoss := NewValue(0)
@@ -411,7 +424,7 @@ func main() {
 		for pos := 0; pos < globalModel.Config.BlockSize; pos++ {
 			logits := globalModel.Forward(tokenID, pos, keys, values)
 			probs := globalModel.Softmax(logits)
-			
+
 			// Sampling
 			rnd := rand.Float64()
 			cumulative := 0.0
@@ -431,13 +444,14 @@ func main() {
 			tokenID = newTokenID
 		}
 
-		fmt.Fprintf(w, `{"text":"%s"}`, strings.Join(sample, ""))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"text": strings.Join(sample, ""),
+		})
 	})
+
+	http.Handle("/", http.FileServer(http.FS(webRoot)))
 
 	fmt.Println("Server starting on :8080...")
 	http.ListenAndServe(":8080", nil)
-}
-
-func (l *[]*Value) append(v *Value) {
-	*l = append(*l, v)
 }
