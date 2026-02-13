@@ -247,15 +247,11 @@
                 <section id="view-inference" class="hidden">
                     <div class="space-y-4 flex flex-col items-center">
                         <h2 class="text-lg font-bold w-full">Hallucination Node</h2>
-                        <div class="w-full flex gap-2">
-                            <input id="inferencePrompt" type="text" placeholder="Type letters to continue..." class="mac-input flex-1">
-                            <button id="clearPromptBtn" class="mac-button">Clear</button>
-                        </div>
                         <div class="w-full h-32 border-2 border-black bg-white flex items-center justify-center p-4">
                             <div id="generatedText" class="code-font text-3xl font-bold">???</div>
                         </div>
-                        <button id="generateBtn" class="mac-button w-full py-4 text-lg">Continue Text</button>
-                        <p class="text-[10px] text-center italic mt-4">Enter letters and the model continues from that prefix.</p>
+                        <button id="generateBtn" class="mac-button w-full py-4 text-lg">Generate Next Word</button>
+                        <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
                     </div>
                 </section>
             </div>
