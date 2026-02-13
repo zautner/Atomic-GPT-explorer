@@ -5,6 +5,7 @@
     activeTab: "theory",
     docs: ["alex", "james", "mary", "anna", "john", "emily", "luke", "olivia", "noah", "sophia"],
     isTraining: false,
+    traceEnabled: false,
     trainProgress: [],
     paramCount: 0,
     isInitialized: false,
@@ -33,7 +34,7 @@
     generateBtn: document.getElementById("generateBtn"),
     traceBtn: document.getElementById("traceBtn"),
     generatedText: document.getElementById("generatedText"),
-    tracePanel: document.getElementById("tracePanel"),
+    traceWindow: document.getElementById("traceWindow"),
     traceSummary: document.getElementById("traceSummary"),
     traceList: document.getElementById("traceList"),
     lossCanvas: document.getElementById("lossCanvas"),
@@ -53,6 +54,17 @@
     }
     if (el.menuInference) {
       el.menuInference.classList.toggle("active", tab === "inference");
+    }
+  }
+
+  function setTraceEnabled(enabled) {
+    state.traceEnabled = enabled;
+    el.traceBtn.classList.toggle("active", enabled);
+    el.traceBtn.textContent = enabled ? "Explain Choice: On" : "Explain Choice: Off";
+    if (enabled) {
+      el.traceWindow.classList.remove("hidden-down");
+    } else {
+      el.traceWindow.classList.add("hidden-down");
     }
   }
 
@@ -204,8 +216,9 @@
     }
     const data = await res.json();
     el.generatedText.textContent = data.text || "???";
-    el.traceList.innerHTML = "";
-    el.traceSummary.textContent = "Trace cleared. Press \"Explain Choice\" to inspect token selection.";
+    if (state.traceEnabled) {
+      await runInferenceTrace();
+    }
   }
 
   function renderTrace(traceData) {
@@ -282,7 +295,12 @@
       runInference().catch(console.error);
     });
     el.traceBtn.addEventListener("click", function () {
-      runInferenceTrace().catch(console.error);
+      if (state.traceEnabled) {
+        setTraceEnabled(false);
+      } else {
+        setTraceEnabled(true);
+        runInferenceTrace().catch(console.error);
+      }
     });
     el.menuTheory.addEventListener("click", function () {
       setActiveTab("theory");
@@ -313,5 +331,6 @@
   bindEvents();
   renderDocs();
   setActiveTab("theory");
+  setTraceEnabled(false);
   initModel().catch(console.error);
 })();

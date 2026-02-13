@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atomic GPT - System 7.0</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -150,6 +151,11 @@
             transform: translate(1px, 1px);
         }
 
+        .mac-button.active {
+            background: black;
+            color: white;
+        }
+
         .mac-tabs {
             display: flex;
             border-bottom: 1px solid black;
@@ -185,17 +191,16 @@
             outline: none;
         }
 
-        .inference-layout {
-            display: grid;
-            grid-template-columns: 1fr 300px;
-            gap: 10px;
-            align-items: start;
+        .trace-window {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            transform: translateY(0);
+            opacity: 1;
         }
 
-        @media (max-width: 980px) {
-            .inference-layout {
-                grid-template-columns: 1fr;
-            }
+        .trace-window.hidden-down {
+            transform: translateY(22px);
+            opacity: 0;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -210,7 +215,7 @@
     </div>
 
     <div class="p-4 relative h-full">
-        <div class="mac-window" style="top: 40px; left: 40px; width: 700px; height: 500px;">
+        <div class="mac-window" style="top: 40px; left: 40px; width: 700px; height: 650px;">
             <div class="mac-title-bar">
                 <div class="mac-close-box"></div>
                 <div class="mac-title-bar-lines"></div>
@@ -275,29 +280,22 @@
                 </section>
 
                 <section id="view-inference" class="hidden">
-                    <div class="inference-layout">
-                        <div class="space-y-4 flex flex-col items-center">
-                            <h2 class="text-lg font-bold w-full">Hallucination Node</h2>
-                            <div class="w-full h-32 border-2 border-black bg-white flex items-center justify-center p-4">
-                                <div id="generatedText" class="code-font text-3xl font-bold">???</div>
-                            </div>
-                            <div class="w-full grid grid-cols-2 gap-2">
-                                <button id="generateBtn" class="mac-button py-4 text-lg">Generate</button>
-                                <button id="traceBtn" class="mac-button py-4 text-lg">Explain Choice</button>
-                            </div>
-                            <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
+                    <div class="space-y-4 flex flex-col items-center">
+                        <h2 class="text-lg font-bold w-full">Hallucination Node</h2>
+                        <div class="w-full h-32 border-2 border-black bg-white flex items-center justify-center p-4">
+                            <div id="generatedText" class="code-font text-3xl font-bold">???</div>
                         </div>
-                        <div id="tracePanel" class="border border-black bg-white p-2 text-xs">
-                            <p class="font-bold mb-2">Inference Trace</p>
-                            <p id="traceSummary" class="mb-2">Press "Explain Choice" to inspect token selection.</p>
-                            <div id="traceList" class="max-h-72 overflow-y-auto space-y-2"></div>
+                        <div class="w-full grid grid-cols-2 gap-2">
+                            <button id="generateBtn" class="mac-button py-4 text-lg">Generate</button>
+                            <button id="traceBtn" class="mac-button py-4 text-lg">Explain Choice: Off</button>
                         </div>
+                        <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
                     </div>
                 </section>
             </div>
         </div>
 
-        <div class="mac-window" style="top: 100px; left: 760px; width: 250px; height: 400px;">
+        <div class="mac-window" style="top: 100px; left: 760px; width: 250px; height: 520px;">
             <div class="mac-title-bar">
                 <div class="mac-close-box"></div>
                 <div class="mac-title-bar-lines"></div>
@@ -309,6 +307,18 @@
                     <button id="addDocBtn" class="mac-button">+</button>
                 </div>
                 <div id="docsList" class="flex-1 border border-black overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div id="traceWindow" class="mac-window trace-window hidden-down" style="top: 100px; left: 1020px; width: 330px; height: 520px;">
+            <div class="mac-title-bar">
+                <div class="mac-close-box"></div>
+                <div class="mac-title-bar-lines"></div>
+                <div class="mac-title-text">Inference Trace</div>
+            </div>
+            <div class="mac-content p-2 text-xs">
+                <p id="traceSummary" class="mb-2">Toggle "Explain Choice" to inspect token selection.</p>
+                <div id="traceList" class="max-h-[320px] overflow-y-auto space-y-2"></div>
             </div>
         </div>
     </div>
