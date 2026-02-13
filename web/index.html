@@ -32,8 +32,7 @@
             border-bottom: 1px solid black;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 8px;
+            gap: 6px;
             padding: 0 10px;
             font-size: 13px;
             font-weight: bold;
@@ -65,13 +64,6 @@
         .menu-item.active {
             border-color: black;
             background: #e6e6e6;
-        }
-
-        .menu-status {
-            font-size: 11px;
-            font-weight: normal;
-            padding: 0 6px;
-            border-left: 1px solid black;
         }
 
         .mac-window {
@@ -210,16 +202,11 @@
 <body>
     <div class="menu-bar">
         <div class="menu-group">
+            <a id="menu-apple" class="menu-item" href="https://github.com/zautner/Atomic-GPT-explorer" target="_blank" rel="noopener noreferrer"></a>
             <button id="menu-theory" class="menu-item active">Theory</button>
             <button id="menu-train" class="menu-item">Training</button>
             <button id="menu-inference" class="menu-item">Inference</button>
-            <button id="menu-start-stop" class="menu-item">Start Train</button>
-            <button id="menu-generate" class="menu-item">Generate</button>
-            <button id="menu-trace" class="menu-item">Explain Choice</button>
-            <button id="menu-reset" class="menu-item">Reset Model</button>
-            <button id="menu-help" class="menu-item">Help Guide</button>
         </div>
-        <div id="menu-status" class="menu-status">Ready</div>
     </div>
 
     <div class="p-4 relative h-full">
