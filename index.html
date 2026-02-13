@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atomic GPT - System 7.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Public+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --mac-beige: #efefef;
+            --mac-border: #000000;
+            --mac-shadow: #808080;
+            --mac-teal: #55aaaa;
+            --mac-gray: #dddddd;
+        }
+
+        body {
+            font-family: 'Public Sans', 'Geneva', sans-serif;
+            background-color: var(--mac-teal);
+            color: black;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            cursor: url('https://cur.cursors-4u.net/mac/mac-1/mac1.cur'), auto;
+        }
+
+        .code-font {
+            font-family: 'Fira Code', 'Monaco', monospace;
+        }
+
+        /* Top Menu Bar */
+        .menu-bar {
+            height: 22px;
+            background: white;
+            border-bottom: 1px solid black;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 1000;
+            position: relative;
+        }
+
+        .menu-item {
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        .menu-item:hover {
+            background: black;
+            color: white;
+        }
+
+        /* Macintosh Window Style */
+        .mac-window {
+            background: white;
+            border: 1px solid black;
+            box-shadow: 2px 2px 0px black;
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mac-title-bar {
+            height: 20px;
+            background: white;
+            border-bottom: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            position: relative;
+            cursor: move;
+        }
+
+        .mac-title-bar-lines {
+            position: absolute;
+            left: 25px;
+            right: 25px;
+            height: 10px;
+            background: repeating-linear-gradient(
+                0deg,
+                black,
+                black 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            opacity: 0.8;
+        }
+
+        .mac-close-box {
+            width: 12px;
+            height: 12px;
+            border: 1px solid black;
+            position: absolute;
+            left: 5px;
+            background: white;
+        }
+
+        .mac-title-text {
+            background: white;
+            padding: 0 10px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 1;
+            text-transform: uppercase;
+        }
+
+        .mac-content {
+            flex: 1;
+            overflow: auto;
+            padding: 10px;
+        }
+
+        /* Classic Scrollbar */
+        .mac-content::-webkit-scrollbar {
+            width: 16px;
+        }
+        .mac-content::-webkit-scrollbar-track {
+            background: white;
+            border-left: 1px solid black;
+        }
+        .mac-content::-webkit-scrollbar-thumb {
+            background: repeating-linear-gradient(
+                45deg,
+                #ccc,
+                #ccc 1px,
+                white 1px,
+                white 2px
+            );
+            border: 1px solid black;
+        }
+
+        /* Buttons */
+        .mac-button {
+            border: 1px solid black;
+            background: white;
+            padding: 4px 15px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 1px 1px 0px black;
+            cursor: pointer;
+        }
+        .mac-button:active {
+            background: black;
+            color: white;
+            box-shadow: none;
+            transform: translate(1px, 1px);
+        }
+        .mac-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Tab strip */
+        .mac-tabs {
+            display: flex;
+            border-bottom: 1px solid black;
+            margin-bottom: 10px;
+        }
+        .mac-tab {
+            padding: 5px 15px;
+            font-size: 12px;
+            border: 1px solid black;
+            border-bottom: none;
+            margin-right: 2px;
+            background: #eee;
+            cursor: pointer;
+        }
+        .mac-tab.active {
+            background: white;
+            font-weight: bold;
+            position: relative;
+            top: 1px;
+        }
+
+        /* Canvas Chart */
+        #lossCanvas {
+            border: 1px solid black;
+            background: white;
+        }
+
+        /* Input fields */
+        .mac-input {
+            border: 1px solid black;
+            padding: 3px 6px;
+            font-size: 12px;
+            outline: none;
+        }
+
+        /* Dithered pattern */
+        .dithered {
+            background-image: radial-gradient(black 1px, transparent 0);
+            background-size: 2px 2px;
+        }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+        "alpinejs": "https://esm.sh/alpinejs@3.13.5"
+      }
+    }
+    </script>
+</head>
+<body>
+    <div class="menu-bar">
+        <div class="menu-item"></div>
+        <div class="menu-item">File</div>
+        <div class="menu-item">Edit</div>
+        <div class="menu-item">Special</div>
+        <div class="menu-item">GPT</div>
+        <div class="menu-item" onclick="window.location.href='/docs/index.html'">Help Guide</div>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="module" src="index.tsx"></script>
+</body>
+</html>

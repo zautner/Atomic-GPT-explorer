@@ -1,0 +1,5 @@
+{
+  "name": "Atomic GPT Explorer",
+  "description": "An interactive playground that explains, trains, and runs the world's most atomic GPT implementation in pure TypeScript/React.",
+  "requestFramePermissions": []
+}
