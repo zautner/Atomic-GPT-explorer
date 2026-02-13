@@ -7,6 +7,7 @@
     isTraining: false,
     traceEnabled: false,
     trainProgress: [],
+    recentPredictions: [],
     paramCount: 0,
     isInitialized: false,
     explanationByTopic: {
@@ -40,6 +41,12 @@
     lossCanvas: document.getElementById("lossCanvas"),
     lossLabel: document.getElementById("lossLabel"),
     paramCount: document.getElementById("paramCount"),
+    contextChar: document.getElementById("contextChar"),
+    targetChar: document.getElementById("targetChar"),
+    predictedChar: document.getElementById("predictedChar"),
+    targetProb: document.getElementById("targetProb"),
+    predictedProb: document.getElementById("predictedProb"),
+    tokenTape: document.getElementById("tokenTape"),
     docsList: document.getElementById("docsList"),
     newDocInput: document.getElementById("newDocInput"),
     addDocBtn: document.getElementById("addDocBtn")
@@ -99,8 +106,15 @@
     state.paramCount = data.params || 0;
     state.isInitialized = true;
     state.trainProgress = [];
+    state.recentPredictions = [];
     el.paramCount.textContent = String(state.paramCount);
     el.lossLabel.textContent = "Current Loss: N/A";
+    el.contextChar.textContent = "N/A";
+    el.targetChar.textContent = "N/A";
+    el.predictedChar.textContent = "N/A";
+    el.targetProb.textContent = "0.0000";
+    el.predictedProb.textContent = "0.0000";
+    el.tokenTape.textContent = "-";
     drawChart();
   }
 
@@ -189,6 +203,19 @@
         if (state.trainProgress.length > 50) {
           state.trainProgress.shift();
         }
+        el.contextChar.textContent = data.context_char || "N/A";
+        el.targetChar.textContent = data.target_char || "N/A";
+        el.predictedChar.textContent = data.predicted_char || "N/A";
+        el.targetProb.textContent = Number(data.target_prob || 0).toFixed(4);
+        el.predictedProb.textContent = Number(data.predicted_prob || 0).toFixed(4);
+        if (!state.recentPredictions) {
+          state.recentPredictions = [];
+        }
+        state.recentPredictions.push(data.predicted_char || "?");
+        if (state.recentPredictions.length > 20) {
+          state.recentPredictions.shift();
+        }
+        el.tokenTape.textContent = state.recentPredictions.join(" ");
         const currentLoss = state.trainProgress[state.trainProgress.length - 1].loss;
         el.lossLabel.textContent = "Current Loss: " + currentLoss.toFixed(4);
         drawChart();

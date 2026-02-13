@@ -331,8 +331,13 @@ type InitRequest struct {
 }
 
 type TrainResponse struct {
-	Step int     `json:"step"`
-	Loss float64 `json:"loss"`
+	Step          int     `json:"step"`
+	Loss          float64 `json:"loss"`
+	ContextChar   string  `json:"context_char"`
+	TargetChar    string  `json:"target_char"`
+	PredictedChar string  `json:"predicted_char"`
+	TargetProb    float64 `json:"target_prob"`
+	PredictedProb float64 `json:"predicted_prob"`
 }
 
 type TraceCandidate struct {
@@ -440,12 +445,33 @@ func main() {
 		keys := make([][][]*Value, globalModel.Config.NLayer)
 		values := make([][][]*Value, globalModel.Config.NLayer)
 		losses := []*Value{}
+		contextChar := "<END>"
+		targetChar := "<END>"
+		predictedChar := "<END>"
+		targetProb := 0.0
+		predictedProb := 0.0
 
 		for pos := 0; pos < n; pos++ {
 			logits := globalModel.Forward(tokens[pos], pos, keys, values)
 			probs := globalModel.Softmax(logits)
 			loss := probs[tokens[pos+1]].Log().Mul(NewValue(-1))
 			losses = append(losses, loss)
+
+			if pos == n-1 {
+				bestIdx := 0
+				bestProb := probs[0].Data
+				for idx, p := range probs {
+					if p.Data > bestProb {
+						bestIdx = idx
+						bestProb = p.Data
+					}
+				}
+				contextChar = tokenLabel(tokens[pos], globalModel.BOS, globalModel.Chars)
+				targetChar = tokenLabel(tokens[pos+1], globalModel.BOS, globalModel.Chars)
+				predictedChar = tokenLabel(bestIdx, globalModel.BOS, globalModel.Chars)
+				targetProb = probs[tokens[pos+1]].Data
+				predictedProb = bestProb
+			}
 		}
 
 		totalLoss := NewValue(0)
@@ -457,8 +483,13 @@ func main() {
 		globalModel.Update()
 
 		json.NewEncoder(w).Encode(TrainResponse{
-			Step: globalModel.Steps,
-			Loss: avgLoss.Data,
+			Step:          globalModel.Steps,
+			Loss:          avgLoss.Data,
+			ContextChar:   contextChar,
+			TargetChar:    targetChar,
+			PredictedChar: predictedChar,
+			TargetProb:    targetProb,
+			PredictedProb: predictedProb,
 		})
 	})
 
