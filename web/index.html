@@ -215,6 +215,10 @@
             opacity: 0;
             pointer-events: none;
         }
+
+        .confidence-value {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -293,7 +297,7 @@
                             <p class="font-bold">Live Token Feedback</p>
                             <p>Context: <span id="contextChar" class="code-font">N/A</span> -> Target: <span id="targetChar" class="code-font">N/A</span></p>
                             <p>Model Guess: <span id="predictedChar" class="code-font">N/A</span> (p=<span id="predictedProb">0.0000</span>)</p>
-                            <p>Target Confidence: <span id="targetProb">0.0000</span></p>
+                            <p>Target Confidence: <span id="targetProb" class="confidence-value">0.0000</span></p>
                             <div id="tokenTape" class="token-tape code-font flex items-center px-2 text-sm">-</div>
                         </div>
                     </div>
