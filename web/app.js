@@ -395,6 +395,11 @@
   }
 
   async function runInference() {
+    if (state.traceEnabled) {
+      await runInferenceTrace();
+      return;
+    }
+
     readGenerateOptions();
     const res = await fetch("/api/generate", {
       method: "POST",
@@ -410,9 +415,6 @@
     }
     const data = await res.json();
     el.generatedText.textContent = data.text || "???";
-    if (state.traceEnabled) {
-      await runInferenceTrace();
-    }
   }
 
   function renderTrace(traceData) {
