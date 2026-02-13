@@ -1,8 +1,9 @@
 # Atomic GPT Explorer (Pure Go)
 
-This project now runs as a single Go application:
+Single Go application with:
 - Go backend API
 - Go-served static frontend (no Node.js, no Vite, no TypeScript)
+- Small educational transformer/autograd implementation
 
 ## Requirements
 
@@ -11,7 +12,7 @@ This project now runs as a single Go application:
 ## Run
 
 ```bash
-go run main.go
+go run .
 ```
 
 Open:
@@ -25,7 +26,20 @@ go build ./...
 
 ## Project layout
 
-- `main.go`: model + API + static file serving
+- `main.go`: app bootstrap (embed assets, register routes, start server)
+- `server.go`: HTTP handlers and shared server state
+- `api_types.go`: request/response structs for API
+- `autograd.go`: tiny autodiff engine (`Value`, ops, `Backward`)
+- `model.go`: model config/state, initialization, math helpers, optimizer
+- `forward.go`: transformer forward pass
+- `inference_and_training.go`: training step + sampling + trace generation
 - `web/index.html`: main UI
 - `web/app.js`: browser logic
 - `web/docs/index.html`: help page
+
+## API endpoints
+
+- `POST /api/init`: initialize model with docs + config
+- `POST /api/train`: run one training step
+- `POST /api/generate`: sample generated text
+- `POST /api/generate_trace`: sample with step-by-step explanation
