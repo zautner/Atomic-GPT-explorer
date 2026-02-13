@@ -17,6 +17,15 @@
   };
 
   const el = {
+    menuTheory: document.getElementById("menu-theory"),
+    menuTrain: document.getElementById("menu-train"),
+    menuInference: document.getElementById("menu-inference"),
+    menuStartStop: document.getElementById("menu-start-stop"),
+    menuGenerate: document.getElementById("menu-generate"),
+    menuTrace: document.getElementById("menu-trace"),
+    menuReset: document.getElementById("menu-reset"),
+    menuHelp: document.getElementById("menu-help"),
+    menuStatus: document.getElementById("menu-status"),
     tabTheory: document.getElementById("tab-theory"),
     tabTrain: document.getElementById("tab-train"),
     tabInference: document.getElementById("tab-inference"),
@@ -41,6 +50,20 @@
     addDocBtn: document.getElementById("addDocBtn")
   };
 
+  function setStatus(text) {
+    el.menuStatus.textContent = text;
+  }
+
+  function updateMenuTabState(tab) {
+    el.menuTheory.classList.toggle("active", tab === "theory");
+    el.menuTrain.classList.toggle("active", tab === "train");
+    el.menuInference.classList.toggle("active", tab === "inference");
+  }
+
+  function updateMenuTrainingButton() {
+    el.menuStartStop.textContent = state.isTraining ? "Stop Train" : "Start Train";
+  }
+
   function setActiveTab(tab) {
     state.activeTab = tab;
     el.tabTheory.classList.toggle("active", tab === "theory");
@@ -49,6 +72,7 @@
     el.viewTheory.classList.toggle("hidden", tab !== "theory");
     el.viewTrain.classList.toggle("hidden", tab !== "train");
     el.viewInference.classList.toggle("hidden", tab !== "inference");
+    updateMenuTabState(tab);
   }
 
   async function initModel() {
@@ -73,6 +97,7 @@
     state.trainProgress = [];
     el.paramCount.textContent = String(state.paramCount);
     el.lossLabel.textContent = "Current Loss: N/A";
+    setStatus("Model initialized");
     drawChart();
   }
 
@@ -147,6 +172,8 @@
       return;
     }
     state.isTraining = true;
+    updateMenuTrainingButton();
+    setStatus("Training in progress");
     el.startTrainBtn.classList.add("hidden");
     el.stopTrainBtn.classList.remove("hidden");
 
@@ -173,12 +200,16 @@
       }
     }
 
+    setStatus("Training stopped");
+    updateMenuTrainingButton();
     el.startTrainBtn.classList.remove("hidden");
     el.stopTrainBtn.classList.add("hidden");
   }
 
   function stopTraining() {
     state.isTraining = false;
+    updateMenuTrainingButton();
+    setStatus("Stopping training...");
   }
 
   async function runInference() {
@@ -188,15 +219,15 @@
     }
     const data = await res.json();
     el.generatedText.textContent = data.text || "???";
-    el.tracePanel.classList.add("hidden");
     el.traceList.innerHTML = "";
-    el.traceSummary.textContent = "";
+    el.traceSummary.textContent = "Trace cleared. Press \"Explain Choice\" to inspect token selection.";
+    setStatus("Generated sample");
   }
 
   function renderTrace(traceData) {
     el.traceList.innerHTML = "";
     el.traceSummary.textContent = "Stop reason: " + (traceData.stop_reason || "unknown");
-    el.tracePanel.classList.remove("hidden");
+    setStatus("Trace ready");
 
     (traceData.steps || []).forEach(function (step) {
       const card = document.createElement("div");
@@ -270,6 +301,42 @@
     el.traceBtn.addEventListener("click", function () {
       runInferenceTrace().catch(console.error);
     });
+    el.menuTheory.addEventListener("click", function () {
+      setActiveTab("theory");
+      setStatus("Viewing theory");
+    });
+    el.menuTrain.addEventListener("click", function () {
+      setActiveTab("train");
+      setStatus("Viewing training");
+    });
+    el.menuInference.addEventListener("click", function () {
+      setActiveTab("inference");
+      setStatus("Viewing inference");
+    });
+    el.menuStartStop.addEventListener("click", function () {
+      setActiveTab("train");
+      if (state.isTraining) {
+        stopTraining();
+      } else {
+        startTraining().catch(console.error);
+      }
+    });
+    el.menuGenerate.addEventListener("click", function () {
+      setActiveTab("inference");
+      runInference().catch(console.error);
+    });
+    el.menuTrace.addEventListener("click", function () {
+      setActiveTab("inference");
+      runInferenceTrace().catch(console.error);
+    });
+    el.menuReset.addEventListener("click", function () {
+      stopTraining();
+      initModel().catch(console.error);
+      setStatus("Model reset");
+    });
+    el.menuHelp.addEventListener("click", function () {
+      window.location.href = "/docs/index.html";
+    });
     el.addDocBtn.addEventListener("click", function () {
       const value = (el.newDocInput.value || "").trim().toLowerCase();
       if (!value) {
@@ -290,5 +357,7 @@
   bindEvents();
   renderDocs();
   setActiveTab("theory");
+  updateMenuTrainingButton();
+  setStatus("Ready");
   initModel().catch(console.error);
 })();

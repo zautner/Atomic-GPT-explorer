@@ -32,6 +32,8 @@
             border-bottom: 1px solid black;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 8px;
             padding: 0 10px;
             font-size: 13px;
             font-weight: bold;
@@ -39,14 +41,37 @@
             position: relative;
         }
 
+        .menu-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .menu-item {
-            margin-right: 15px;
             cursor: pointer;
+            border: 1px solid transparent;
+            padding: 0 6px;
+            height: 18px;
+            line-height: 16px;
+            background: transparent;
         }
 
         .menu-item:hover {
             background: black;
             color: white;
+            border-color: black;
+        }
+
+        .menu-item.active {
+            border-color: black;
+            background: #e6e6e6;
+        }
+
+        .menu-status {
+            font-size: 11px;
+            font-weight: normal;
+            padding: 0 6px;
+            border-left: 1px solid black;
         }
 
         .mac-window {
@@ -167,16 +192,34 @@
             font-size: 12px;
             outline: none;
         }
+
+        .inference-layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 10px;
+            align-items: start;
+        }
+
+        @media (max-width: 980px) {
+            .inference-layout {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="menu-bar">
-        <div class="menu-item"></div>
-        <div class="menu-item">File</div>
-        <div class="menu-item">Edit</div>
-        <div class="menu-item">Special</div>
-        <div class="menu-item">GPT</div>
-        <div class="menu-item" onclick="window.location.href='/docs/index.html'">Help Guide</div>
+        <div class="menu-group">
+            <button id="menu-theory" class="menu-item active">Theory</button>
+            <button id="menu-train" class="menu-item">Training</button>
+            <button id="menu-inference" class="menu-item">Inference</button>
+            <button id="menu-start-stop" class="menu-item">Start Train</button>
+            <button id="menu-generate" class="menu-item">Generate</button>
+            <button id="menu-trace" class="menu-item">Explain Choice</button>
+            <button id="menu-reset" class="menu-item">Reset Model</button>
+            <button id="menu-help" class="menu-item">Help Guide</button>
+        </div>
+        <div id="menu-status" class="menu-status">Ready</div>
     </div>
 
     <div class="p-4 relative h-full">
@@ -245,20 +288,22 @@
                 </section>
 
                 <section id="view-inference" class="hidden">
-                    <div class="space-y-4 flex flex-col items-center">
-                        <h2 class="text-lg font-bold w-full">Hallucination Node</h2>
-                        <div class="w-full h-32 border-2 border-black bg-white flex items-center justify-center p-4">
-                            <div id="generatedText" class="code-font text-3xl font-bold">???</div>
+                    <div class="inference-layout">
+                        <div class="space-y-4 flex flex-col items-center">
+                            <h2 class="text-lg font-bold w-full">Hallucination Node</h2>
+                            <div class="w-full h-32 border-2 border-black bg-white flex items-center justify-center p-4">
+                                <div id="generatedText" class="code-font text-3xl font-bold">???</div>
+                            </div>
+                            <div class="w-full grid grid-cols-2 gap-2">
+                                <button id="generateBtn" class="mac-button py-4 text-lg">Generate</button>
+                                <button id="traceBtn" class="mac-button py-4 text-lg">Explain Choice</button>
+                            </div>
+                            <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
                         </div>
-                        <div class="w-full grid grid-cols-2 gap-2">
-                            <button id="generateBtn" class="mac-button py-4 text-lg">Generate</button>
-                            <button id="traceBtn" class="mac-button py-4 text-lg">Explain Choice</button>
-                        </div>
-                        <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
-                        <div id="tracePanel" class="w-full border border-black bg-white p-2 text-xs hidden">
+                        <div id="tracePanel" class="border border-black bg-white p-2 text-xs">
                             <p class="font-bold mb-2">Inference Trace</p>
-                            <p id="traceSummary" class="mb-2"></p>
-                            <div id="traceList" class="max-h-44 overflow-y-auto space-y-2"></div>
+                            <p id="traceSummary" class="mb-2">Press "Explain Choice" to inspect token selection.</p>
+                            <div id="traceList" class="max-h-72 overflow-y-auto space-y-2"></div>
                         </div>
                     </div>
                 </section>
