@@ -15,6 +15,51 @@
       "Transformer": "What it is:\nA Transformer is a next-token predictor built from repeated blocks. Each block mixes information across positions (attention) and then transforms features (MLP).\n\nHow it works in this app:\n1) Character token + position embedding are combined.\n2) RMSNorm stabilizes magnitudes.\n3) Attention reads prior context using query/key/value projections.\n4) Residual connection keeps useful prior signal.\n5) MLP expands then compresses features for richer representation.\n6) Final linear head converts features to logits over possible next characters.\n\nWhy it matters:\nThis structure can model dependencies between distant characters while remaining efficient enough for iterative training and generation in a browser-connected demo.",
       "Attention": "What it is:\nAttention is a weighted lookup over previous tokens. At each step, the model asks: 'Which earlier positions are most relevant to predicting the next character?'\n\nHow the score is formed:\n- Query (current state) is compared with Keys (past states).\n- Dot products are scaled, then softmax converts them into probabilities.\n- Those probabilities weight the Values (past content) to build a context vector.\n\nInterpretation:\nHigher attention weight means that prior token had more influence on this step. In trace output, top candidates reflect the combined effect of these context-aware features plus output projection.",
       "Go Backend": "What it is:\nThe Go backend is the execution engine for model state, math, and APIs. The UI only visualizes data; learning and sampling happen in Go.\n\nRuntime responsibilities:\n- /api/init: build model parameters from docs + config.\n- /api/train: run one training step and return metrics for chart/feedback panel.\n- /api/generate: sample next-token sequence from current model state.\n- /api/generate_trace: return step-by-step candidate probabilities and selection reasons.\n\nWhy Go helps here:\nGo gives predictable performance, simple concurrency control via mutexes, and easy deployment as a single binary serving both model APIs and static UI assets."
+    },
+    htmlByTopic: {
+      "Vocabulary": "<div class='space-y-1'>" +
+        "<p><span class='font-bold'>Token:</span> Smallest prediction unit (this app uses characters).</p>" +
+        "<p><span class='font-bold'>Logit:</span> Raw score before normalization.</p>" +
+        "<p><span class='font-bold'>Probability:</span> Softmax-normalized chance for each next token.</p>" +
+        "<p><span class='font-bold'>Context:</span> Sequence already seen/generated before current step.</p>" +
+        "<p><span class='font-bold'>Embedding:</span> Learned vector representation of token or position.</p>" +
+        "<p><span class='font-bold'>Attention Weight:</span> Influence strength from one earlier position.</p>" +
+        "<p><span class='font-bold'>Loss:</span> Prediction error used for learning.</p>" +
+        "<p><span class='font-bold'>Gradient:</span> Direction/size for parameter updates.</p>" +
+        "<p><span class='font-bold'>Adam:</span> Optimizer that updates parameters using moving moments.</p>" +
+        "<p><span class='font-bold'>Sampling Draw (u):</span> Random value in [0,1) used for token choice.</p>" +
+        "<p><span class='font-bold'>Cumulative Interval:</span> Probability range that captures the draw.</p>" +
+        "<p><span class='font-bold'>&lt;END&gt;:</span> Stop token that terminates generation.</p>" +
+        "</div>",
+      "Flowchart": "<div class='space-y-3'>" +
+        "<p class='font-bold'>Training Flow</p>" +
+        "<svg viewBox='0 0 620 145' width='100%' height='145' xmlns='http://www.w3.org/2000/svg'>" +
+        "<defs><marker id='arr' markerWidth='8' markerHeight='8' refX='7' refY='4' orient='auto'><path d='M0,0 L8,4 L0,8 z' fill='black'/></marker></defs>" +
+        "<rect x='10' y='40' width='85' height='32' fill='white' stroke='black'/><text x='52' y='60' text-anchor='middle' font-size='11'>Sample Doc</text>" +
+        "<line x1='95' y1='56' x2='125' y2='56' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='125' y='40' width='95' height='32' fill='white' stroke='black'/><text x='172' y='60' text-anchor='middle' font-size='11'>Forward Pass</text>" +
+        "<line x1='220' y1='56' x2='250' y2='56' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='250' y='40' width='80' height='32' fill='white' stroke='black'/><text x='290' y='60' text-anchor='middle' font-size='11'>Loss</text>" +
+        "<line x1='330' y1='56' x2='360' y2='56' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='360' y='40' width='100' height='32' fill='white' stroke='black'/><text x='410' y='60' text-anchor='middle' font-size='11'>Backward</text>" +
+        "<line x1='460' y1='56' x2='490' y2='56' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='490' y='40' width='110' height='32' fill='white' stroke='black'/><text x='545' y='60' text-anchor='middle' font-size='11'>Adam Update</text>" +
+        "<text x='310' y='108' text-anchor='middle' font-size='10'>repeat train step -> lower loss over time</text>" +
+        "</svg>" +
+        "<p class='font-bold'>Inference Probability Chart (example)</p>" +
+        "<svg viewBox='0 0 620 130' width='100%' height='130' xmlns='http://www.w3.org/2000/svg'>" +
+        "<rect x='0' y='0' width='620' height='130' fill='white' stroke='black'/>" +
+        "<line x1='40' y1='100' x2='590' y2='100' stroke='black'/>" +
+        "<line x1='40' y1='20' x2='40' y2='100' stroke='black'/>" +
+        "<rect x='80' y='35' width='40' height='65' fill='#0a7a0a' stroke='black'/><text x='100' y='112' text-anchor='middle' font-size='10'>h</text><text x='100' y='30' text-anchor='middle' font-size='10'>0.81</text>" +
+        "<rect x='160' y='84' width='40' height='16' fill='#b58900' stroke='black'/><text x='180' y='112' text-anchor='middle' font-size='10'>p</text><text x='180' y='79' text-anchor='middle' font-size='10'>0.17</text>" +
+        "<rect x='240' y='96' width='40' height='4' fill='#b58900' stroke='black'/><text x='260' y='112' text-anchor='middle' font-size='10'>l</text>" +
+        "<rect x='320' y='98' width='40' height='2' fill='#b00020' stroke='black'/><text x='340' y='112' text-anchor='middle' font-size='10'>a</text>" +
+        "<rect x='400' y='99' width='40' height='1' fill='#b00020' stroke='black'/><text x='420' y='112' text-anchor='middle' font-size='10'>x</text>" +
+        "<text x='500' y='42' font-size='10'>Random draw u = 0.84</text>" +
+        "<text x='500' y='57' font-size='10'>Selection by cumulative range</text>" +
+        "</svg>" +
+        "</div>"
     }
   };
 
@@ -345,6 +390,10 @@
   }
 
   function showExplanation(topic) {
+    if (state.htmlByTopic[topic]) {
+      el.explanationText.innerHTML = state.htmlByTopic[topic];
+      return;
+    }
     const text = state.explanationByTopic[topic] || "No explanation available.";
     el.explanationText.textContent = text;
     el.explanationBox.classList.remove("hidden");
@@ -412,5 +461,6 @@
   renderDocs();
   setActiveTab("theory");
   setTraceEnabled(false);
+  showExplanation("Vocabulary");
   initModel().catch(console.error);
 })();

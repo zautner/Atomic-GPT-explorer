@@ -262,13 +262,15 @@
                     <div class="space-y-4">
                         <h2 class="text-lg font-bold">System Architecture</h2>
                         <p class="text-sm italic">Atomic GPT uses a Go-based Autograd engine to compute gradients for a minimalist Transformer.</p>
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-3 gap-3">
+                            <button data-topic="Vocabulary" class="mac-button explain-btn">Vocabulary</button>
+                            <button data-topic="Flowchart" class="mac-button explain-btn">Flowchart</button>
                             <button data-topic="Autograd" class="mac-button explain-btn">About Autograd</button>
                             <button data-topic="Transformer" class="mac-button explain-btn">About Transformer</button>
                             <button data-topic="Attention" class="mac-button explain-btn">About Attention</button>
                             <button data-topic="Go Backend" class="mac-button explain-btn">About Go Backend</button>
                         </div>
-                        <div id="explanationBox" class="border border-black p-3 text-xs bg-slate-50 mt-4 hidden">
+                        <div id="explanationBox" class="border border-black p-3 text-xs bg-slate-50 mt-4">
                             <p class="font-bold mb-1">Guide Explanation:</p>
                             <div id="explanationText" class="text-[11px] leading-snug whitespace-pre-line"></div>
                         </div>
