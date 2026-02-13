@@ -28,7 +28,9 @@
     startTrainBtn: document.getElementById("startTrainBtn"),
     stopTrainBtn: document.getElementById("stopTrainBtn"),
     generateBtn: document.getElementById("generateBtn"),
+    clearPromptBtn: document.getElementById("clearPromptBtn"),
     generatedText: document.getElementById("generatedText"),
+    inferencePrompt: document.getElementById("inferencePrompt"),
     lossCanvas: document.getElementById("lossCanvas"),
     lossLabel: document.getElementById("lossLabel"),
     paramCount: document.getElementById("paramCount"),
@@ -178,7 +180,15 @@
   }
 
   async function runInference() {
-    const res = await fetch("/api/generate");
+    const rawPrompt = (el.inferencePrompt.value || "");
+    const prompt = rawPrompt.toLowerCase().replace(/[^a-z]/g, "");
+    el.inferencePrompt.value = prompt;
+
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: prompt })
+    });
     if (!res.ok) {
       throw new Error("inference request failed");
     }
@@ -215,6 +225,15 @@
     el.stopTrainBtn.addEventListener("click", stopTraining);
     el.generateBtn.addEventListener("click", function () {
       runInference().catch(console.error);
+    });
+    el.clearPromptBtn.addEventListener("click", function () {
+      el.inferencePrompt.value = "";
+      el.generatedText.textContent = "???";
+    });
+    el.inferencePrompt.addEventListener("keydown", function (evt) {
+      if (evt.key === "Enter") {
+        runInference().catch(console.error);
+      }
     });
     el.addDocBtn.addEventListener("click", function () {
       const value = (el.newDocInput.value || "").trim().toLowerCase();

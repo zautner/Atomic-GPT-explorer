@@ -335,6 +335,10 @@ type TrainResponse struct {
 	Loss float64 `json:"loss"`
 }
 
+type GenerateRequest struct {
+	Prompt string `json:"prompt"`
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	webRoot, err := fs.Sub(webFS, "web")
@@ -416,12 +420,54 @@ func main() {
 		globalModel.mu.Lock()
 		defer globalModel.mu.Unlock()
 
+		var req GenerateRequest
+		if r.Method == http.MethodPost {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, "Invalid request body", 400)
+				return
+			}
+		} else {
+			req.Prompt = r.URL.Query().Get("prompt")
+		}
+
+		prompt := strings.ToLower(req.Prompt)
+		charToID := make(map[string]int, len(globalModel.Chars))
+		for idx, c := range globalModel.Chars {
+			charToID[c] = idx
+		}
+
+		promptTokens := make([]int, 0, len(prompt))
+		for _, r := range prompt {
+			if tokenID, ok := charToID[string(r)]; ok {
+				promptTokens = append(promptTokens, tokenID)
+			}
+		}
+		maxPrompt := globalModel.Config.BlockSize - 1
+		if maxPrompt < 0 {
+			maxPrompt = 0
+		}
+		if len(promptTokens) > maxPrompt {
+			promptTokens = promptTokens[len(promptTokens)-maxPrompt:]
+		}
+
+		conditionedPrefix := make([]string, 0, len(promptTokens))
+		for _, tokenID := range promptTokens {
+			conditionedPrefix = append(conditionedPrefix, globalModel.Chars[tokenID])
+		}
+
 		tokenID := globalModel.BOS
 		sample := []string{}
 		keys := make([][][]*Value, globalModel.Config.NLayer)
 		values := make([][][]*Value, globalModel.Config.NLayer)
+		pos := 0
 
-		for pos := 0; pos < globalModel.Config.BlockSize; pos++ {
+		for _, nextTokenID := range promptTokens {
+			_ = globalModel.Forward(tokenID, pos, keys, values)
+			tokenID = nextTokenID
+			pos++
+		}
+
+		for ; pos < globalModel.Config.BlockSize; pos++ {
 			logits := globalModel.Forward(tokenID, pos, keys, values)
 			probs := globalModel.Softmax(logits)
 
@@ -446,7 +492,7 @@ func main() {
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"text": strings.Join(sample, ""),
+			"text": strings.Join(conditionedPrefix, "") + strings.Join(sample, ""),
 		})
 	})
 
