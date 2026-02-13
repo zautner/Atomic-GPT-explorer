@@ -178,10 +178,6 @@
       return;
     }
 
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-
     const maxLoss = Math.max.apply(
       null,
       state.trainProgress.map(function (p) {
@@ -189,16 +185,39 @@
       }).concat([5])
     );
 
-    state.trainProgress.forEach(function (p, i) {
-      const x = (i / 49) * w;
-      const y = h - (p.loss / maxLoss) * h;
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    ctx.stroke();
+    ctx.lineWidth = 2;
+    for (let i = 1; i < state.trainProgress.length; i += 1) {
+      const prev = state.trainProgress[i - 1];
+      const curr = state.trainProgress[i];
+      const x1 = ((i - 1) / 49) * w;
+      const y1 = h - (prev.loss / maxLoss) * h;
+      const x2 = (i / 49) * w;
+      const y2 = h - (curr.loss / maxLoss) * h;
+      ctx.strokeStyle = confidenceColorRGB(Number(curr.targetProb || 0));
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+  }
+
+  function confidenceColorRGB(value) {
+    const v = Math.max(0, Math.min(1, value));
+    const red = { r: 176, g: 0, b: 32 };
+    const yellow = { r: 181, g: 137, b: 0 };
+    const green = { r: 10, g: 122, b: 10 };
+
+    function lerp(a, b, t) {
+      return Math.round(a + (b - a) * t);
+    }
+
+    if (v <= 0.65) {
+      const t = v / 0.65;
+      return "rgb(" + lerp(red.r, yellow.r, t) + ", " + lerp(red.g, yellow.g, t) + ", " + lerp(red.b, yellow.b, t) + ")";
+    }
+
+    const t = (v - 0.65) / 0.35;
+    return "rgb(" + lerp(yellow.r, green.r, t) + ", " + lerp(yellow.g, green.g, t) + ", " + lerp(yellow.b, green.b, t) + ")";
   }
 
   async function startTraining() {
@@ -216,7 +235,7 @@
           throw new Error("training request failed");
         }
         const data = await res.json();
-        state.trainProgress.push({ step: data.step, loss: data.loss });
+        state.trainProgress.push({ step: data.step, loss: data.loss, targetProb: Number(data.target_prob || 0) });
         if (state.trainProgress.length > 50) {
           state.trainProgress.shift();
         }
