@@ -34,6 +34,8 @@
     stopTrainBtn: document.getElementById("stopTrainBtn"),
     generateBtn: document.getElementById("generateBtn"),
     traceBtn: document.getElementById("traceBtn"),
+    feedbackUpBtn: document.getElementById("feedbackUpBtn"),
+    feedbackDownBtn: document.getElementById("feedbackDownBtn"),
     generatedText: document.getElementById("generatedText"),
     traceWindow: document.getElementById("traceWindow"),
     traceSummary: document.getElementById("traceSummary"),
@@ -329,6 +331,23 @@
     renderTrace(data);
   }
 
+  async function sendFeedback(rating) {
+    const text = (el.generatedText.textContent || "").trim();
+    if (!text || text === "???") {
+      return;
+    }
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text, rating: rating })
+    });
+    if (!res.ok) {
+      throw new Error("feedback request failed");
+    }
+    const data = await res.json();
+    return Number(data.applied || 0);
+  }
+
   function showExplanation(topic) {
     const text = state.explanationByTopic[topic] || "No explanation available.";
     el.explanationText.textContent = text;
@@ -366,6 +385,22 @@
         setTraceEnabled(true);
         runInferenceTrace().catch(console.error);
       }
+    });
+    el.feedbackUpBtn.addEventListener("click", function () {
+      sendFeedback(1).then(function (applied) {
+        el.feedbackUpBtn.textContent = "+ Saved (" + String(applied) + ")";
+        setTimeout(function () {
+          el.feedbackUpBtn.textContent = "+ Useful";
+        }, 600);
+      }).catch(console.error);
+    });
+    el.feedbackDownBtn.addEventListener("click", function () {
+      sendFeedback(-1).then(function (applied) {
+        el.feedbackDownBtn.textContent = "- Saved (" + String(applied) + ")";
+        setTimeout(function () {
+          el.feedbackDownBtn.textContent = "- Unhelpful";
+        }, 600);
+      }).catch(console.error);
     });
     el.menuTheory.addEventListener("click", function () {
       setActiveTab("theory");
