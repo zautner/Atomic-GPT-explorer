@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"sync"
@@ -55,6 +56,19 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
+// decodeOptionalJSON decodes JSON when body is present.
+// Empty bodies are treated as "use defaults" rather than errors.
+func decodeOptionalJSON(r *http.Request, dst any) error {
+	if r.Body == nil {
+		return nil
+	}
+	err := json.NewDecoder(r.Body).Decode(dst)
+	if err == io.EOF {
+		return nil
+	}
+	return err
+}
+
 func (s *Server) handleInit(w http.ResponseWriter, r *http.Request) {
 	var req InitRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -86,7 +100,21 @@ func (s *Server) handleTrain(w http.ResponseWriter, r *http.Request) {
 	model.mu.Lock()
 	defer model.mu.Unlock()
 
-	resp, err := TrainOneStep(model, docs)
+	req := TrainRequest{}
+	if err := decodeOptionalJSON(r, &req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	stepsPerCall := req.StepsPerCall
+	if stepsPerCall <= 0 {
+		stepsPerCall = 2
+	}
+	batchSize := req.BatchSize
+	if batchSize <= 0 {
+		batchSize = 4
+	}
+
+	resp, err := TrainBatchedSteps(model, docs, stepsPerCall, batchSize)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -104,7 +132,23 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	model.mu.Lock()
 	defer model.mu.Unlock()
 
-	text := GenerateSample(model)
+	req := GenerateRequest{}
+	if err := decodeOptionalJSON(r, &req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	opts := req.Options
+	if opts.Temperature <= 0 {
+		opts.Temperature = 0.7
+	}
+	if opts.TopK <= 0 {
+		opts.TopK = 5
+	}
+	if opts.MinLen <= 0 {
+		opts.MinLen = 3
+	}
+
+	text := GenerateSample(model, opts)
 	writeJSON(w, http.StatusOK, map[string]string{"text": text})
 }
 
@@ -118,5 +162,21 @@ func (s *Server) handleGenerateTrace(w http.ResponseWriter, r *http.Request) {
 	model.mu.Lock()
 	defer model.mu.Unlock()
 
-	writeJSON(w, http.StatusOK, GenerateSampleWithTrace(model))
+	req := GenerateRequest{}
+	if err := decodeOptionalJSON(r, &req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	opts := req.Options
+	if opts.Temperature <= 0 {
+		opts.Temperature = 0.7
+	}
+	if opts.TopK <= 0 {
+		opts.TopK = 5
+	}
+	if opts.MinLen <= 0 {
+		opts.MinLen = 3
+	}
+
+	writeJSON(w, http.StatusOK, GenerateSampleWithTrace(model, opts))
 }

@@ -18,6 +18,37 @@ type TrainResponse struct {
 	PredictedProb float64 `json:"predicted_prob"`
 }
 
+// TrainRequest controls how much work /api/train performs in one call.
+//
+// All fields are optional; server uses safe defaults when omitted.
+type TrainRequest struct {
+	StepsPerCall int `json:"steps_per_call"`
+	BatchSize    int `json:"batch_size"`
+}
+
+// GenerateOptions controls stochastic sampling behavior.
+//
+// Temperature:
+// - < 1.0 => sharper/more deterministic output
+// - > 1.0 => more random output
+//
+// TopK:
+// - 0 => disabled
+// - N => keep only N highest-probability tokens before sampling
+//
+// MinLen:
+// - minimum characters to emit before allowing <END>.
+type GenerateOptions struct {
+	Temperature float64 `json:"temperature"`
+	TopK        int     `json:"top_k"`
+	MinLen      int     `json:"min_len"`
+}
+
+// GenerateRequest allows options for /api/generate and /api/generate_trace.
+type GenerateRequest struct {
+	Options GenerateOptions `json:"options"`
+}
+
 // TraceCandidate is one candidate token shown in generation trace.
 type TraceCandidate struct {
 	Char    string  `json:"char"`

@@ -8,6 +8,15 @@
     traceEnabled: false,
     trainProgress: [],
     recentPredictions: [],
+    trainOptions: {
+      stepsPerCall: 2,
+      batchSize: 4
+    },
+    generateOptions: {
+      temperature: 0.7,
+      topK: 5,
+      minLen: 3
+    },
     paramCount: 0,
     isInitialized: false,
     explanationByTopic: {
@@ -94,8 +103,65 @@
     tokenTape: document.getElementById("tokenTape"),
     docsList: document.getElementById("docsList"),
     newDocInput: document.getElementById("newDocInput"),
-    addDocBtn: document.getElementById("addDocBtn")
+    addDocBtn: document.getElementById("addDocBtn"),
+    trainStepsInput: document.getElementById("trainStepsInput"),
+    trainBatchInput: document.getElementById("trainBatchInput"),
+    tempInput: document.getElementById("tempInput"),
+    topKInput: document.getElementById("topKInput"),
+    minLenInput: document.getElementById("minLenInput"),
+    presetSafeBtn: document.getElementById("presetSafeBtn"),
+    presetCreativeBtn: document.getElementById("presetCreativeBtn"),
+    presetRandomBtn: document.getElementById("presetRandomBtn")
   };
+
+  function clampNumber(value, min, max, fallback) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+      return fallback;
+    }
+    return Math.min(max, Math.max(min, n));
+  }
+
+  function readTrainOptions() {
+    state.trainOptions.stepsPerCall = Math.round(
+      clampNumber(el.trainStepsInput.value, 1, 20, 2)
+    );
+    state.trainOptions.batchSize = Math.round(
+      clampNumber(el.trainBatchInput.value, 1, 64, 4)
+    );
+    el.trainStepsInput.value = String(state.trainOptions.stepsPerCall);
+    el.trainBatchInput.value = String(state.trainOptions.batchSize);
+  }
+
+  function readGenerateOptions() {
+    state.generateOptions.temperature = clampNumber(el.tempInput.value, 0.1, 2, 0.7);
+    state.generateOptions.topK = Math.round(
+      clampNumber(el.topKInput.value, 1, 64, 5)
+    );
+    state.generateOptions.minLen = Math.round(
+      clampNumber(el.minLenInput.value, 0, 32, 3)
+    );
+    el.tempInput.value = String(state.generateOptions.temperature);
+    el.topKInput.value = String(state.generateOptions.topK);
+    el.minLenInput.value = String(state.generateOptions.minLen);
+  }
+
+  function setSamplingPreset(kind) {
+    if (kind === "safe") {
+      el.tempInput.value = "0.6";
+      el.topKInput.value = "4";
+      el.minLenInput.value = "3";
+    } else if (kind === "creative") {
+      el.tempInput.value = "0.9";
+      el.topKInput.value = "8";
+      el.minLenInput.value = "2";
+    } else if (kind === "random") {
+      el.tempInput.value = "1.2";
+      el.topKInput.value = "16";
+      el.minLenInput.value = "1";
+    }
+    readGenerateOptions();
+  }
 
   function updateMenuTabState(tab) {
     if (el.menuTheory) {
@@ -276,7 +342,15 @@
 
     while (state.isTraining) {
       try {
-        const res = await fetch("/api/train", { method: "POST" });
+        readTrainOptions();
+        const res = await fetch("/api/train", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            steps_per_call: state.trainOptions.stepsPerCall,
+            batch_size: state.trainOptions.batchSize
+          })
+        });
         if (!res.ok) {
           throw new Error("training request failed");
         }
@@ -321,7 +395,16 @@
   }
 
   async function runInference() {
-    const res = await fetch("/api/generate");
+    readGenerateOptions();
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ options: {
+        temperature: state.generateOptions.temperature,
+        top_k: state.generateOptions.topK,
+        min_len: state.generateOptions.minLen
+      } })
+    });
     if (!res.ok) {
       throw new Error("inference request failed");
     }
@@ -380,7 +463,16 @@
   }
 
   async function runInferenceTrace() {
-    const res = await fetch("/api/generate_trace", { method: "POST" });
+    readGenerateOptions();
+    const res = await fetch("/api/generate_trace", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ options: {
+        temperature: state.generateOptions.temperature,
+        top_k: state.generateOptions.topK,
+        min_len: state.generateOptions.minLen
+      } })
+    });
     if (!res.ok) {
       throw new Error("trace inference request failed");
     }
@@ -455,10 +547,26 @@
         el.addDocBtn.click();
       }
     });
+    el.trainStepsInput.addEventListener("change", readTrainOptions);
+    el.trainBatchInput.addEventListener("change", readTrainOptions);
+    el.tempInput.addEventListener("change", readGenerateOptions);
+    el.topKInput.addEventListener("change", readGenerateOptions);
+    el.minLenInput.addEventListener("change", readGenerateOptions);
+    el.presetSafeBtn.addEventListener("click", function () {
+      setSamplingPreset("safe");
+    });
+    el.presetCreativeBtn.addEventListener("click", function () {
+      setSamplingPreset("creative");
+    });
+    el.presetRandomBtn.addEventListener("click", function () {
+      setSamplingPreset("random");
+    });
   }
 
   bindEvents();
   renderDocs();
+  readTrainOptions();
+  readGenerateOptions();
   setActiveTab("theory");
   setTraceEnabled(false);
   showExplanation("Vocabulary");

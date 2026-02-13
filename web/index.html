@@ -317,6 +317,22 @@
                             </div>
                         </div>
                         <div class="border border-black p-2 text-xs bg-white space-y-2">
+                            <p class="font-bold">Train Controls</p>
+                            <div class="grid grid-cols-3 gap-2 items-end">
+                                <label class="flex flex-col gap-1">
+                                    <span>Steps / call</span>
+                                    <input id="trainStepsInput" type="number" min="1" max="20" step="1" value="2" class="mac-input">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span>Batch size</span>
+                                    <input id="trainBatchInput" type="number" min="1" max="64" step="1" value="4" class="mac-input">
+                                </label>
+                                <div class="text-[10px] border border-black p-1 bg-slate-50">
+                                    Larger values train faster per request but increase CPU work.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border border-black p-2 text-xs bg-white space-y-2">
                             <p class="font-bold">Live Token Feedback</p>
                             <p>Context: <span id="contextChar" class="code-font">N/A</span> -> Target: <span id="targetChar" class="code-font">N/A</span></p>
                             <p>Model Guess: <span id="predictedChar" class="code-font">N/A</span> (p=<span id="predictedProb">0.0000</span>)</p>
@@ -335,6 +351,28 @@
                         <div class="w-full grid grid-cols-2 gap-2">
                             <button id="generateBtn" class="mac-button py-4 text-lg">Generate</button>
                             <button id="traceBtn" class="mac-button py-4 text-lg">Explain Choice: Off</button>
+                        </div>
+                        <div class="w-full border border-black p-2 text-xs bg-white space-y-2">
+                            <p class="font-bold">Sampling Controls</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button id="presetSafeBtn" class="mac-button text-[11px] py-1">Safe Names</button>
+                                <button id="presetCreativeBtn" class="mac-button text-[11px] py-1">Creative</button>
+                                <button id="presetRandomBtn" class="mac-button text-[11px] py-1">Very Random</button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 items-end">
+                                <label class="flex flex-col gap-1">
+                                    <span>Temperature</span>
+                                    <input id="tempInput" type="number" min="0.1" max="2" step="0.1" value="0.7" class="mac-input">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span>Top-K</span>
+                                    <input id="topKInput" type="number" min="1" max="64" step="1" value="5" class="mac-input">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span>Min length</span>
+                                    <input id="minLenInput" type="number" min="0" max="32" step="1" value="3" class="mac-input">
+                                </label>
+                            </div>
                         </div>
                         <p class="text-[10px] text-center italic mt-4">The model predicts the next character based on training patterns.</p>
                     </div>
