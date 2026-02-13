@@ -9,7 +9,7 @@ import (
 )
 
 // tokenLabel converts token IDs to human-readable labels.
-// BOS token is displayed as <END> in this project.
+// This project uses one shared control token for BOS and END, displayed as <END>.
 func tokenLabel(tokenID, bos int, chars []string) string {
 	if tokenID == bos {
 		return "<END>"

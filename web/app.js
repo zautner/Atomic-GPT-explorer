@@ -23,50 +23,59 @@
       "Autograd": "What it is:\nAutograd is an automatic way to compute derivatives. Every math operation creates a node that stores both a value (Data) and how sensitive loss is to that value (Grad).\n\nHow it works here:\n1) Forward pass: the model computes logits and loss.\n2) Backward pass: gradients are propagated from loss back through all connected nodes using the chain rule.\n3) Update: Adam uses those gradients to nudge parameters in directions that should reduce future loss.\n\nWhy it matters:\nWithout autograd, each derivative would need to be hand-coded and easy to break. With autograd, the model can safely combine many operations and still learn from errors.",
       "Transformer": "What it is:\nA Transformer is a next-token predictor built from repeated blocks. Each block mixes information across positions (attention) and then transforms features (MLP).\n\nHow it works in this app:\n1) Character token + position embedding are combined.\n2) RMSNorm stabilizes magnitudes.\n3) Attention reads prior context using query/key/value projections.\n4) Residual connection keeps useful prior signal.\n5) MLP expands then compresses features for richer representation.\n6) Final linear head converts features to logits over possible next characters.\n\nWhy it matters:\nThis structure can model dependencies between distant characters while remaining efficient enough for iterative training and generation in a browser-connected demo.",
       "Attention": "What it is:\nAttention is a weighted lookup over previous tokens. At each step, the model asks: 'Which earlier positions are most relevant to predicting the next character?'\n\nHow the score is formed:\n- Query (current state) is compared with Keys (past states).\n- Dot products are scaled, then softmax converts them into probabilities.\n- Those probabilities weight the Values (past content) to build a context vector.\n\nInterpretation:\nHigher attention weight means that prior token had more influence on this step. In trace output, top candidates reflect the combined effect of these context-aware features plus output projection.",
-      "Go Backend": "What it is:\nThe Go backend is the execution engine for model state, math, and APIs. The UI only visualizes data; learning and sampling happen in Go.\n\nRuntime responsibilities:\n- /api/init: build model parameters from docs + config.\n- /api/train: run one training step and return metrics for chart/feedback panel.\n- /api/generate: sample next-token sequence from current model state.\n- /api/generate_trace: return step-by-step candidate probabilities and selection reasons.\n\nWhy Go helps here:\nGo gives predictable performance, simple concurrency control via mutexes, and easy deployment as a single binary serving both model APIs and static UI assets."
+      "Go Backend": "What it is:\nThe Go backend is the execution engine for model state, math, and APIs. The UI only visualizes data; learning and sampling happen in Go.\n\nRuntime responsibilities:\n- /api/init: build model parameters from docs + config.\n- /api/train: run configurable training work (steps_per_call, batch_size) and return chart/feedback metrics.\n- /api/generate: sample next-token sequence using sampling options.\n- /api/generate_trace: sample once and return step-by-step candidate probabilities and selection reasons.\n\nWhy Go helps here:\nGo gives predictable performance, simple concurrency control via mutexes, and easy deployment as a single binary serving both model APIs and static UI assets."
     },
     htmlByTopic: {
-      "Vocabulary": "<div class='space-y-1'>" +
-        "<p><span class='font-bold'>Token:</span> Smallest prediction unit (this app uses characters).</p>" +
-        "<p><span class='font-bold'>Logit:</span> Raw score before normalization.</p>" +
-        "<p><span class='font-bold'>Probability:</span> Softmax-normalized chance for each next token.</p>" +
-        "<p><span class='font-bold'>Context:</span> Sequence already seen/generated before current step.</p>" +
-        "<p><span class='font-bold'>Embedding:</span> Learned vector representation of token or position.</p>" +
-        "<p><span class='font-bold'>Attention Weight:</span> Influence strength from one earlier position.</p>" +
-        "<p><span class='font-bold'>Loss:</span> Prediction error used for learning.</p>" +
-        "<p><span class='font-bold'>Gradient:</span> Direction/size for parameter updates.</p>" +
-        "<p><span class='font-bold'>Adam:</span> Optimizer that updates parameters using moving moments.</p>" +
-        "<p><span class='font-bold'>Sampling Draw (u):</span> Random value in [0,1) used for token choice.</p>" +
-        "<p><span class='font-bold'>Cumulative Interval:</span> Probability range that captures the draw.</p>" +
-        "<p><span class='font-bold'>&lt;END&gt;:</span> Stop token that terminates generation.</p>" +
+      "Vocabulary": "<div class='space-y-2'>" +
+        "<p class='font-bold'>Mini Dictionary (Student Version)</p>" +
+        "<p><span class='font-bold'>Token:</span> One character unit the model reads and predicts (for example: 'a', 'n', 'l').</p>" +
+        "<p><span class='font-bold'>Vocabulary:</span> The full set of tokens the model is allowed to output.</p>" +
+        "<p><span class='font-bold'>Context:</span> Characters already seen so far. The next prediction depends on this context.</p>" +
+        "<p><span class='font-bold'>Embedding:</span> A learned list of numbers that represents each token and each position.</p>" +
+        "<p><span class='font-bold'>Logit:</span> Raw score for each possible next token before converting to probabilities.</p>" +
+        "<p><span class='font-bold'>Probability:</span> Chance of each token after Softmax. All token probabilities add up to 1.00.</p>" +
+        "<p><span class='font-bold'>Attention Weight:</span> How strongly the current step listens to an earlier character.</p>" +
+        "<p><span class='font-bold'>Loss:</span> Prediction error. Higher loss means worse prediction.</p>" +
+        "<p><span class='font-bold'>Gradient:</span> Direction and strength used to change parameters to reduce loss.</p>" +
+        "<p><span class='font-bold'>Adam:</span> Optimizer that applies gradients to update parameters each training step.</p>" +
+        "<p><span class='font-bold'>Sampling Draw (u):</span> Random number in [0,1) used to pick a token from probabilities.</p>" +
+        "<p><span class='font-bold'>Cumulative Interval:</span> Running probability ranges. The interval containing u wins.</p>" +
+        "<p><span class='font-bold'>&lt;END&gt; Control Token:</span> In this project one special token is reused for start and stop.</p>" +
         "</div>",
       "Flowchart": "<div class='space-y-3'>" +
-        "<p class='font-bold'>Training Flow</p>" +
-        "<svg viewBox='0 0 620 145' width='100%' height='145' xmlns='http://www.w3.org/2000/svg'>" +
+        "<p class='font-bold'>Training Flow (per /api/train call)</p>" +
+        "<svg viewBox='0 0 780 185' width='100%' height='185' xmlns='http://www.w3.org/2000/svg'>" +
         "<defs><marker id='arr' markerWidth='8' markerHeight='8' refX='7' refY='4' orient='auto'><path d='M0,0 L8,4 L0,8 z' fill='black'/></marker></defs>" +
-        "<rect x='10' y='40' width='85' height='32' fill='white' stroke='black'/><text x='52' y='60' text-anchor='middle' font-size='11'>Sample Doc</text>" +
-        "<line x1='95' y1='56' x2='125' y2='56' stroke='black' marker-end='url(#arr)'/>" +
-        "<rect x='125' y='40' width='95' height='32' fill='white' stroke='black'/><text x='172' y='60' text-anchor='middle' font-size='11'>Forward Pass</text>" +
-        "<line x1='220' y1='56' x2='250' y2='56' stroke='black' marker-end='url(#arr)'/>" +
-        "<rect x='250' y='40' width='80' height='32' fill='white' stroke='black'/><text x='290' y='60' text-anchor='middle' font-size='11'>Loss</text>" +
-        "<line x1='330' y1='56' x2='360' y2='56' stroke='black' marker-end='url(#arr)'/>" +
-        "<rect x='360' y='40' width='100' height='32' fill='white' stroke='black'/><text x='410' y='60' text-anchor='middle' font-size='11'>Backward</text>" +
-        "<line x1='460' y1='56' x2='490' y2='56' stroke='black' marker-end='url(#arr)'/>" +
-        "<rect x='490' y='40' width='110' height='32' fill='white' stroke='black'/><text x='545' y='60' text-anchor='middle' font-size='11'>Adam Update</text>" +
-        "<text x='310' y='108' text-anchor='middle' font-size='10'>repeat train step -> lower loss over time</text>" +
+        "<rect x='10' y='52' width='108' height='40' fill='white' stroke='black'/><text x='64' y='76' text-anchor='middle' font-size='11'>1) Sample</text><text x='64' y='88' text-anchor='middle' font-size='10'>batch_size names</text>" +
+        "<line x1='118' y1='72' x2='147' y2='72' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='147' y='52' width='116' height='40' fill='white' stroke='black'/><text x='205' y='76' text-anchor='middle' font-size='11'>2) Encode</text><text x='205' y='88' text-anchor='middle' font-size='10'>chars to IDs</text>" +
+        "<line x1='263' y1='72' x2='292' y2='72' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='292' y='52' width='122' height='40' fill='white' stroke='black'/><text x='353' y='76' text-anchor='middle' font-size='11'>3) Forward</text><text x='353' y='88' text-anchor='middle' font-size='10'>predict next char</text>" +
+        "<line x1='414' y1='72' x2='443' y2='72' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='443' y='52' width='96' height='40' fill='white' stroke='black'/><text x='491' y='76' text-anchor='middle' font-size='11'>4) Loss</text><text x='491' y='88' text-anchor='middle' font-size='10'>prediction error</text>" +
+        "<line x1='539' y1='72' x2='568' y2='72' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='568' y='52' width='96' height='40' fill='white' stroke='black'/><text x='616' y='76' text-anchor='middle' font-size='11'>5) Backward</text><text x='616' y='88' text-anchor='middle' font-size='10'>compute grads</text>" +
+        "<line x1='664' y1='72' x2='693' y2='72' stroke='black' marker-end='url(#arr)'/>" +
+        "<rect x='693' y='52' width='76' height='40' fill='white' stroke='black'/><text x='731' y='76' text-anchor='middle' font-size='11'>6) Adam</text><text x='731' y='88' text-anchor='middle' font-size='10'>update</text>" +
+        "<path d='M731 94 L731 130 L64 130 L64 95' fill='none' stroke='black' marker-end='url(#arr)'/>" +
+        "<text x='398' y='146' text-anchor='middle' font-size='10'>Loop repeats for steps_per_call. More good data + enough steps usually lowers loss.</text>" +
         "</svg>" +
-        "<p class='font-bold'>Inference Probability Chart (example)</p>" +
-        "<svg viewBox='0 0 620 130' width='100%' height='130' xmlns='http://www.w3.org/2000/svg'>" +
-        "<rect x='0' y='0' width='620' height='130' fill='white' stroke='black'/>" +
-        "<line x1='40' y1='100' x2='590' y2='100' stroke='black'/>" +
-        "<line x1='40' y1='20' x2='40' y2='100' stroke='black'/>" +
-        "<rect x='80' y='35' width='40' height='65' fill='#0a7a0a' stroke='black'/><text x='100' y='112' text-anchor='middle' font-size='10'>h</text><text x='100' y='30' text-anchor='middle' font-size='10'>0.81</text>" +
-        "<rect x='160' y='84' width='40' height='16' fill='#b58900' stroke='black'/><text x='180' y='112' text-anchor='middle' font-size='10'>p</text><text x='180' y='79' text-anchor='middle' font-size='10'>0.17</text>" +
-        "<rect x='240' y='96' width='40' height='4' fill='#b58900' stroke='black'/><text x='260' y='112' text-anchor='middle' font-size='10'>l</text>" +
-        "<rect x='320' y='98' width='40' height='2' fill='#b00020' stroke='black'/><text x='340' y='112' text-anchor='middle' font-size='10'>a</text>" +
-        "<rect x='400' y='99' width='40' height='1' fill='#b00020' stroke='black'/><text x='420' y='112' text-anchor='middle' font-size='10'>x</text>" +
-        "<text x='500' y='42' font-size='10'>Random draw u = 0.84</text>" +
-        "<text x='500' y='57' font-size='10'>Selection by cumulative range</text>" +
+        "<p class='font-bold'>Inference Sampling (example probabilities sum to 1.00)</p>" +
+        "<svg viewBox='0 0 780 165' width='100%' height='165' xmlns='http://www.w3.org/2000/svg'>" +
+        "<rect x='0' y='0' width='780' height='165' fill='white' stroke='black'/>" +
+        "<line x1='45' y1='120' x2='520' y2='120' stroke='black'/>" +
+        "<line x1='45' y1='20' x2='45' y2='120' stroke='black'/>" +
+        "<rect x='80' y='62' width='52' height='58' fill='#0a7a0a' stroke='black'/><text x='106' y='136' text-anchor='middle' font-size='10'>a</text><text x='106' y='56' text-anchor='middle' font-size='10'>0.58</text>" +
+        "<rect x='155' y='97' width='52' height='23' fill='#b58900' stroke='black'/><text x='181' y='136' text-anchor='middle' font-size='10'>n</text><text x='181' y='91' text-anchor='middle' font-size='10'>0.23</text>" +
+        "<rect x='230' y='109' width='52' height='11' fill='#b58900' stroke='black'/><text x='256' y='136' text-anchor='middle' font-size='10'>i</text><text x='256' y='103' text-anchor='middle' font-size='10'>0.11</text>" +
+        "<rect x='305' y='115' width='52' height='5' fill='#b00020' stroke='black'/><text x='331' y='136' text-anchor='middle' font-size='10'>e</text><text x='331' y='109' text-anchor='middle' font-size='10'>0.05</text>" +
+        "<rect x='380' y='117' width='52' height='3' fill='#b00020' stroke='black'/><text x='406' y='136' text-anchor='middle' font-size='10'>&lt;END&gt;</text><text x='406' y='111' text-anchor='middle' font-size='10'>0.03</text>" +
+        "<text x='555' y='40' font-size='11'>Draw u = 0.64</text>" +
+        "<text x='555' y='58' font-size='10'>Cumulative intervals:</text>" +
+        "<text x='555' y='74' font-size='10'>a: [0.00, 0.58)</text>" +
+        "<text x='555' y='90' font-size='10'>n: [0.58, 0.81)  &lt;- chosen</text>" +
+        "<text x='555' y='106' font-size='10'>i: [0.81, 0.92), e: [0.92, 0.97)</text>" +
+        "<text x='555' y='122' font-size='10'>&lt;END&gt;: [0.97, 1.00)</text>" +
         "</svg>" +
         "</div>"
     }

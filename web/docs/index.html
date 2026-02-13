@@ -175,22 +175,22 @@
             <div class="mac-title-text">Help: How Atomic GPT Works</div>
         </div>
         <div class="mac-content">
-            <p class="mb-6 text-sm">Welcome to the Atomic GPT Guide! This project is a minimalist implementation of a Generative Pre-trained Transformer built in Go.</p>
+            <p class="mb-6 text-sm">Welcome to the Atomic GPT Guide. This is a small character-level transformer trained from scratch on the text list you provide in the UI.</p>
             <div class="step-container">
-                <div class="step-title"><span class="step-number">1</span> Words to Numbers</div>
-                <p class="text-sm mb-4">Characters are converted into token IDs so the model can operate on numbers.</p>
+                <div class="step-title"><span class="step-number">1</span> Text to Token IDs</div>
+                <p class="text-sm mb-4">Characters are converted into token IDs so the model can operate on numbers. IDs depend on the current training list, so exact values can change after re-initialization.</p>
                 <div class="flex items-center gap-4 p-4 bg-gray-50 border border-black">
                     <div id="wordBox" class="font-bold text-xl tracking-widest">
                         <span class="token-anim">A</span><span class="token-anim">L</span><span class="token-anim">E</span><span class="token-anim">X</span>
                     </div>
                     <div class="arrow"></div>
-                    <div id="numBox" class="font-mono text-lg">[0, 11, 4, 23]</div>
+                    <div id="numBox" class="font-mono text-lg">[&lt;END&gt;, ?, ?, ?, ?, &lt;END&gt;]</div>
                 </div>
                 <button onclick="animateTokens()" class="mac-button">Animate Encoding</button>
             </div>
             <div class="step-container">
                 <div class="step-title"><span class="step-number">2</span> Autograd Engine</div>
-                <p class="text-sm mb-4">Each Value stores data and gradient, so backpropagation can update parameters.</p>
+                <p class="text-sm mb-4">Each Value stores data and gradient. During backpropagation, gradients accumulate through all operations and Adam updates parameters.</p>
                 <div class="flex items-center justify-around p-6">
                     <div class="node">
                         <div class="text-[10px] uppercase font-bold">Input</div>
@@ -209,6 +209,16 @@
                         <div class="flow-data">5.0</div>
                         <div class="flow-grad">1.0</div>
                     </div>
+                </div>
+            </div>
+            <div class="step-container">
+                <div class="step-title"><span class="step-number">3</span> Training and Sampling Controls</div>
+                <p class="text-sm mb-3">The app exposes controls that directly map to backend API options.</p>
+                <div class="text-sm border border-black bg-gray-50 p-4 space-y-2">
+                    <p><strong>Training defaults:</strong> steps/call = 1, batch size = 6.</p>
+                    <p><strong>Sampling defaults:</strong> temperature = 0.7, top-k = 5, min length = 3.</p>
+                    <p><strong>Presets:</strong> Safe Names (0.6 / 4 / 3), Creative (0.9 / 8 / 2), Very Random (1.6 / 16 / 1).</p>
+                    <p><strong>Trace mode:</strong> Generate uses one traced sampling request (no duplicate generation).</p>
                 </div>
             </div>
             <div class="flex justify-center mt-8">

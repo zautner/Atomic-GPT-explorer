@@ -35,6 +35,7 @@ type TrainRequest struct {
 // TopK:
 // - 0 => disabled
 // - N => keep only N highest-probability tokens before sampling
+// - HTTP handlers currently apply default values when options are omitted or non-positive.
 //
 // MinLen:
 // - minimum characters to emit before allowing <END>.

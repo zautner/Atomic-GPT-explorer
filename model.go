@@ -49,7 +49,7 @@ type Model struct {
 // Vocabulary setup:
 // - We collect every unique rune from docs.
 // - We sort characters for deterministic token IDs.
-// - We append one special token (<END>) as BOS.
+// - We append one special control token used as both BOS and END.
 func NewModel(config Config, docs []string) *Model {
 	charSet := make(map[rune]bool)
 	for _, doc := range docs {
